@@ -3,19 +3,16 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Union
 
 import requests
-from mangadl.cbz import create_cbz
+from mangadlmao.cbz import create_cbz
+from mangadlmao.utils import sanitize_path
 
 logger = logging.getLogger(__name__)
 
 
-def sanitize_path(path: Union[str, Path]):
-    # make path component windows compatible
-    return str(path).lstrip(". ").replace("/", "-").replace("\\", "-") \
-        .replace(":", "").replace("?", "").replace("*", "").replace("|", "") \
-        .replace("<", "_").replace(">", "_").replace("\"", "'").strip()
+class RetryException(Exception):
+    pass
 
 
 class MangaDex:
@@ -69,7 +66,7 @@ class MangaDex:
     def at_home_download_page(self, url: str, page: str, tmpdir: str):
         num_bytes = 0
         try:
-            logger.info('Downloading chapter page %s from URL %s', page, url)
+            logger.debug('Downloading chapter page %s from URL %s', page, url)
             start_time = time.monotonic()
             with self.s.get(url, stream=True) as r:
                 with open(Path(tmpdir, Path(page).name), 'wb') as fd:
@@ -97,8 +94,8 @@ class MangaDex:
         else:
             cached = False
 
-        logger.info('Reporting to MangaDex@Home: url: %s, success: %s, cached: %s, bytes: %s, duration: %s',
-                    url, success, cached, num_bytes, duration)
+        logger.debug('Reporting to MangaDex@Home: url: %s, success: %s, cached: %s, bytes: %s, duration: %s',
+                     url, success, cached, num_bytes, duration)
 
         with self.s.post('https://api.mangadex.network/report', json={
             'url': url,
@@ -116,10 +113,15 @@ class MangaDex:
         base_url = chapter_data['baseUrl']
         chapter_hash = chapter_data['chapter']['hash']
         pages: list[str] = chapter_data['chapter']['data']
-        logger.info('Downloading chapter %s with hash %s from baseUrl %s', chapter_id, chapter_hash, base_url)
+        logger.debug('Downloading chapter %s with hash %s from baseUrl %s', chapter_id, chapter_hash, base_url)
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            attempts = 0
             while True:
+                if attempts >= 3:
+                    logging.debug('Aborting chapter download after %s attempts', attempts)
+                    raise RetryException()
+                attempts += 1
                 failed_pages = []
                 # iterate and append failed pages to new list
                 for page in pages:
@@ -128,6 +130,7 @@ class MangaDex:
                         failed_pages.append(page)
 
                 if failed_pages:
+                    logger.debug('Retrying to download failed pages: %s', ', '.join(failed_pages))
                     # get new base url to download from different node
                     base_url = self.at_home_chapter(chapter_id)['baseUrl']
                     # replace pages list with list of failed pages
@@ -138,7 +141,7 @@ class MangaDex:
 
             yield Path(tmpdir)
 
-    def download_manga(self, manga_id: str, dest_dir: Path = Path('.')):
+    def download_manga(self, manga_id: str, manga_title: str, dest_dir: Path = Path('.')):
         chapters = self.get_manga_chapters(manga_id)
         for chapter in chapters:
             series_title = ''
@@ -152,10 +155,18 @@ class MangaDex:
                 elif r['type'] == 'user':
                     username = r['attributes']['username']
 
+            series_title = manga_title if manga_title else series_title
             author = scanlation_group if scanlation_group else username
 
             chapter_id = chapter['id']
             a = chapter['attributes']
+
+            if not a['chapter']:
+                logger.warning(
+                    'Chapter with title "%s" by "%s" has no chapter number, skipping. Chapter ID: %s',
+                    a['title'], author, chapter_id)
+                continue
+
             comic_info = {
                 'Title': a['title'],
                 'Number': a['chapter'],
@@ -165,6 +176,11 @@ class MangaDex:
             filepath = dest_dir / sanitize_path(series_title)
             filepath.mkdir(parents=True, exist_ok=True)
             filepath /= filename
-            with self.download_chapter(chapter_id) as tmpdir:
-                create_cbz(tmpdir, filepath, comic_info)
-            break
+            if filepath.exists():
+                logger.debug('Skipping already downloaded chapter: %s', filepath)
+                continue
+            try:
+                with self.download_chapter(chapter_id) as tmpdir:
+                    create_cbz(tmpdir, filepath, comic_info)
+            except RetryException:
+                pass
