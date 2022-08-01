@@ -161,7 +161,7 @@ class MangaDex:
             chapter_id = chapter['id']
             a = chapter['attributes']
 
-            if not a['chapter']:
+            if a['chapter'] is None:
                 logger.warning(
                     'Chapter with title "%s" by "%s" has no chapter number, skipping. Chapter ID: %s',
                     a['title'], author, chapter_id)
@@ -172,7 +172,8 @@ class MangaDex:
                 'Number': a['chapter'],
                 'Series': series_title,
             }
-            filename = sanitize_path(f"{int(a['chapter']):03d} - {author} - {chapter_id} - {a['updatedAt']}.cbz")
+            updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
+            filename = sanitize_path(f"{float(a['chapter']):03g} - {author} {chapter_id} {updated}.cbz")
             filepath = dest_dir / sanitize_path(series_title)
             filepath.mkdir(parents=True, exist_ok=True)
             filepath /= filename
