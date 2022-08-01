@@ -2,6 +2,7 @@ import logging
 import tempfile
 import time
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
 import requests
@@ -35,6 +36,23 @@ class MangaDex:
         finally:
             self.last_request = time.monotonic()
 
+    def get_manga_title_and_cover(self, manga_id: str) -> tuple[str, BytesIO]:
+        with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}", params={
+            'includes[]': ['cover_art'],
+        }) as r:
+            data = r.json()['data']
+            # title
+            title = data['attributes']['title']['en']
+
+            # cover
+            cover_rel = next((x for x in data['relationships'] if x['type'] == 'cover_art'), None)
+            cover_url = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
+            with self.s.get(cover_url) as r:
+                cover = BytesIO(r.content)
+                cover.name = 'cover.' + cover_url.rsplit('.', 1)[1]
+
+            return (title, cover)
+
     def get_manga_chapters(self, manga_id: str, languages: list[str]) -> list[dict]:
         chapters = []
 
@@ -46,7 +64,7 @@ class MangaDex:
                 'offset': offset,
                 'translatedLanguage[]': languages,
                 'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
-                'includes[]': ['scanlation_group', 'manga', 'user'],
+                'includes[]': ['scanlation_group', 'user'],
             }) as r:
                 data = r.json()
                 chapters.extend(data['data'])
@@ -142,20 +160,35 @@ class MangaDex:
             yield Path(tmpdir)
 
     def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.')):
+        # get title and cover URL
+        series_title, cover = self.get_manga_title_and_cover(manga_id)
+
+        # override with user provided title
+        if manga_title:
+            series_title = manga_title
+
+        # prepare destination directory
+        dest_dir /= sanitize_path(series_title)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # delete old covers
+        for c in dest_dir.glob('cover.*'):
+            c.unlink(missing_ok=True)
+        # save cover
+        with (dest_dir / str(cover.name)).open('wb') as f:
+            f.write(cover.getbuffer())
+        cover.close()
+
         chapters = self.get_manga_chapters(manga_id, languages)
         for chapter in chapters:
-            series_title = ''
             scanlation_group = ''
             username = ''
             for r in chapter['relationships']:
-                if r['type'] == 'manga':
-                    series_title = r['attributes']['title']['en']
-                elif r['type'] == 'scanlation_group':
+                if r['type'] == 'scanlation_group':
                     scanlation_group = r['attributes']['name']
                 elif r['type'] == 'user':
                     username = r['attributes']['username']
 
-            series_title = manga_title if manga_title else series_title
             author = scanlation_group if scanlation_group else username
 
             chapter_id = chapter['id']
@@ -175,9 +208,7 @@ class MangaDex:
             updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
             number = format_chapter_number(str(a['chapter']))
             filename = sanitize_path(f"{number} - {author} {chapter_id} {updated}.cbz")
-            filepath = dest_dir / sanitize_path(series_title)
-            filepath.mkdir(parents=True, exist_ok=True)
-            filepath /= filename
+            filepath = dest_dir / filename
             if filepath.exists():
                 logger.debug('Skipping already downloaded chapter: %s', filepath)
                 continue
