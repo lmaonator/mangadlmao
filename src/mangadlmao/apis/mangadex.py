@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 from mangadlmao.cbz import create_cbz
-from mangadlmao.utils import sanitize_path
+from mangadlmao.utils import format_chapter_number, sanitize_path
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +173,8 @@ class MangaDex:
                 'Series': series_title,
             }
             updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
-            filename = sanitize_path(f"{float(a['chapter']):03g} - {author} {chapter_id} {updated}.cbz")
+            number = format_chapter_number(str(a['chapter']))
+            filename = sanitize_path(f"{number} - {author} {chapter_id} {updated}.cbz")
             filepath = dest_dir / sanitize_path(series_title)
             filepath.mkdir(parents=True, exist_ok=True)
             filepath /= filename
