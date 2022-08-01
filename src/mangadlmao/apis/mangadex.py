@@ -172,7 +172,7 @@ class MangaDex:
                 'Number': a['chapter'],
                 'Series': series_title,
             }
-            filename = sanitize_path(f"{a['chapter']} - {author} - {chapter_id} - {a['updatedAt']}.cbz")
+            filename = sanitize_path(f"{a['chapter']:03d} - {author} - {chapter_id} - {a['updatedAt']}.cbz")
             filepath = dest_dir / sanitize_path(series_title)
             filepath.mkdir(parents=True, exist_ok=True)
             filepath /= filename
