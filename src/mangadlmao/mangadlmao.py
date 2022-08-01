@@ -12,6 +12,7 @@ CONFIG_DIR = Path(appdirs.user_config_dir(APPNAME))
 CONFIG_FILE = CONFIG_DIR / 'config.yml'
 DEFAULT_CONFIG = {
     'download_directory': '.',
+    'lang': ['en'],
     'manga': [],
 }
 
@@ -39,11 +40,13 @@ def main():
     if not download_dir.exists():
         print(f'config error: download_directory does not exist: {download_dir}')
         return
+    default_languages = config.get('lang', DEFAULT_CONFIG['lang'])
     if not config.get('manga'):
         print('No manga in configuration file')
         return
 
     md = MangaDex()
     for manga in config.get('manga'):
-        print(f"Downloading manga {manga['title']} ({manga['id']}) to {download_dir}")
-        md.download_manga(manga['id'], manga['title'], download_dir)
+        lang = default_languages if not manga.get('lang') else manga.get('lang')
+        print(f"Downloading manga {manga['title']} ({manga['id']}) in languages {', '.join(lang)} to {download_dir}")
+        md.download_manga(manga['id'], manga['title'], lang, download_dir)

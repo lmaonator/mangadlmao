@@ -10,9 +10,14 @@ The configuration file is YAML:
 ---
 download_directory: "."
 
+# default languages to download, can be overridden per manga
+lang:
+  - en
+
 manga:
   - title: Tokyo Meow Meow
     id: aed24b2e-b574-4204-9702-cda5cfc567de
   - title: Yofukashi no Uta
     id: 259dfd8a-f06a-4825-8fa6-a2dcd7274230
+    lang: [en, de]
 ```

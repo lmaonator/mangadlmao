@@ -35,7 +35,7 @@ class MangaDex:
         finally:
             self.last_request = time.monotonic()
 
-    def get_manga_chapters(self, manga_id: str) -> list[dict]:
+    def get_manga_chapters(self, manga_id: str, languages: list[str]) -> list[dict]:
         chapters = []
 
         limit = 500
@@ -44,7 +44,7 @@ class MangaDex:
             with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}/feed", params={
                 'limit': limit,
                 'offset': offset,
-                'translatedLanguage[]': ['en', 'de'],
+                'translatedLanguage[]': languages,
                 'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
                 'includes[]': ['scanlation_group', 'manga', 'user'],
             }) as r:
@@ -141,8 +141,8 @@ class MangaDex:
 
             yield Path(tmpdir)
 
-    def download_manga(self, manga_id: str, manga_title: str, dest_dir: Path = Path('.')):
-        chapters = self.get_manga_chapters(manga_id)
+    def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.')):
+        chapters = self.get_manga_chapters(manga_id, languages)
         for chapter in chapters:
             series_title = ''
             scanlation_group = ''
@@ -172,7 +172,7 @@ class MangaDex:
                 'Number': a['chapter'],
                 'Series': series_title,
             }
-            filename = sanitize_path(f"{a['chapter']:03d} - {author} - {chapter_id} - {a['updatedAt']}.cbz")
+            filename = sanitize_path(f"{int(a['chapter']):03d} - {author} - {chapter_id} - {a['updatedAt']}.cbz")
             filepath = dest_dir / sanitize_path(series_title)
             filepath.mkdir(parents=True, exist_ok=True)
             filepath /= filename
