@@ -194,7 +194,7 @@ class MangaDex:
             f.write(cover.getbuffer())
         cover.close()
 
-        chapters = self.get_manga_chapters(manga_id, languages)
+        chapters = self.get_manga_chapters(manga_id, languages, since)
         for chapter in chapters:
             scanlation_group = ''
             username = ''
