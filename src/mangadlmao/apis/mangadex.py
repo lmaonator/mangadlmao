@@ -44,7 +44,9 @@ class MangaDex:
         }) as r:
             data = r.json()['data']
             # title
-            title = data['attributes']['title']['en']
+            title = data['attributes']['title'].get('en')
+            if not title:
+                title = data['attributes']['title'].get('ja-ro')
 
             # cover
             cover_rel = next((x for x in data['relationships'] if x['type'] == 'cover_art'), None)
