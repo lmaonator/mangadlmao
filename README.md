@@ -17,7 +17,11 @@ lang:
 manga:
   - title: Tokyo Meow Meow
     id: aed24b2e-b574-4204-9702-cda5cfc567de
+    # skip chapters uploaded after specified date:
+    since: 2020-12-24
+
   - title: Yofukashi no Uta
     id: 259dfd8a-f06a-4825-8fa6-a2dcd7274230
+    # override default languages:
     lang: [en, de]
 ```

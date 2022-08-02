@@ -46,7 +46,8 @@ def main():
         return
 
     md = MangaDex()
+    manga: dict[str, Any]
     for manga in config.get('manga'):
         lang = default_languages if not manga.get('lang') else manga.get('lang')
         print(f"Downloading manga {manga['title']} ({manga['id']}) in languages {', '.join(lang)} to {download_dir}")
-        md.download_manga(manga['id'], manga['title'], lang, download_dir)
+        md.download_manga(manga['id'], manga['title'], lang, download_dir, since=manga.get('since'))

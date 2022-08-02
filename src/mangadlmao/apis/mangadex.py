@@ -2,8 +2,10 @@ import logging
 import tempfile
 import time
 from contextlib import contextmanager
+from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
+from typing import Union
 
 import requests
 from mangadlmao.cbz import create_cbz
@@ -53,19 +55,29 @@ class MangaDex:
 
             return (title, cover)
 
-    def get_manga_chapters(self, manga_id: str, languages: list[str]) -> list[dict]:
+    def get_manga_chapters(self, manga_id: str, languages: list[str],
+                           since: Union[datetime, date] = None) -> list[dict]:
         chapters = []
+
+        params = {
+            'translatedLanguage[]': languages,
+            'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
+            'includes[]': ['scanlation_group', 'user'],
+        }
+        if since is not None:
+            # convert date to datetime
+            if not isinstance(since, datetime):
+                since = datetime(since.year, since.month, since.day)
+            params['createdAtSince'] = since.isoformat(timespec='seconds')
 
         limit = 500
         offset = 0
         while True:
-            with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}/feed", params={
+            params.update({
                 'limit': limit,
                 'offset': offset,
-                'translatedLanguage[]': languages,
-                'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
-                'includes[]': ['scanlation_group', 'user'],
-            }) as r:
+            })
+            with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}/feed", params=params) as r:
                 data = r.json()
                 chapters.extend(data['data'])
 
@@ -159,7 +171,8 @@ class MangaDex:
 
             yield Path(tmpdir)
 
-    def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.')):
+    def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.'),
+                       since: datetime = None):
         # get title and cover URL
         series_title, cover = self.get_manga_title_and_cover(manga_id)
 
