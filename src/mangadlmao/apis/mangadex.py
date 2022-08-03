@@ -218,7 +218,7 @@ class MangaDex:
             comic_info = {
                 'Title': a['title'],
                 'Number': a['chapter'],
-                'Editor': author,
+                'Translator': author,
                 'Series': series_title,
             }
             updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]

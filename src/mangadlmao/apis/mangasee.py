@@ -66,6 +66,7 @@ class MangaSee:
             comic_info = {
                 'Title': entry.title,
                 'Number': number,
+                'Translator': 'MangaSee',
                 'Series': manga_title,
             }
             updated = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
