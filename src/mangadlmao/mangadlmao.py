@@ -6,6 +6,7 @@ import appdirs
 import yaml
 
 from mangadlmao.apis.mangadex import MangaDex
+from mangadlmao.apis.mangasee import MangaSee
 
 APPNAME = "mangadlmao"
 CONFIG_DIR = Path(appdirs.user_config_dir(APPNAME))
@@ -46,8 +47,16 @@ def main():
         return
 
     md = MangaDex()
+    ms = MangaSee()
     manga: dict[str, Any]
     for manga in config.get('manga'):
-        lang = default_languages if not manga.get('lang') else manga.get('lang')
-        print(f"Downloading manga {manga['title']} ({manga['id']}) in languages {', '.join(lang)} to {download_dir}")
-        md.download_manga(manga['id'], manga['title'], lang, download_dir, since=manga.get('since'))
+        if 'id' in manga:
+            # MangaDex
+            lang = default_languages if not manga.get('lang') else manga.get('lang')
+            print(f"Downloading MangaDex manga {manga.get('title')} ({manga['id']}) in languages {', '.join(lang)}"
+                  f" to {download_dir}")
+            md.download_manga(manga['id'], manga.get('title'), lang, download_dir, since=manga.get('since'))
+        elif 'rss' in manga:
+            # MangaSee
+            print(f"Downloading MangaSee manga {manga.get('title')} ({manga['rss']}) to {download_dir}")
+            ms.download_manga(manga['rss'], manga.get('title'), download_dir, since=manga.get('since'))
