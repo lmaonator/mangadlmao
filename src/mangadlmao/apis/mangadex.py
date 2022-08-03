@@ -209,6 +209,12 @@ class MangaDex:
             chapter_id = chapter['id']
             a = chapter['attributes']
 
+            # skip external chapters (MangaPlus, etc.)
+            if a['externalUrl']:
+                logger.info('Skipping external chapter "%s" by "%s". Chapter ID: %s - URL: %s',
+                            a['title'], author, chapter_id, a['externalUrl'])
+                continue
+
             if a['chapter'] is None:
                 logger.warning(
                     'Chapter with title "%s" by "%s" has no chapter number, skipping. Chapter ID: %s',
