@@ -220,6 +220,7 @@ class MangaDex:
                 'Number': a['chapter'],
                 'Translator': author,
                 'Series': series_title,
+                'LanguageISO': a['translatedLanguage'],
             }
             updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
             number = format_chapter_number(str(a['chapter']))

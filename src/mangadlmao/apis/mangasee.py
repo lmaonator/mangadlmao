@@ -68,6 +68,7 @@ class MangaSee:
                 'Number': number,
                 'Translator': 'MangaSee',
                 'Series': manga_title,
+                'LanguageISO': 'en',
             }
             updated = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
             number = format_chapter_number(number)
