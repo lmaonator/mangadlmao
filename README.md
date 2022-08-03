@@ -1,6 +1,6 @@
 # mangadlmao
 
-A cli script to download and package manga into cbz for Komga.
+A cli script to download and package manga into CBZ for Komga.
 
 What sets it apart from other scripts like this is that it creates
 a `ComicInfo.xml` for Komga and it will also download any updated chapters
