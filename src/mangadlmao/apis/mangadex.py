@@ -70,7 +70,7 @@ class MangaDex:
             # convert date to datetime
             if not isinstance(since, datetime):
                 since = datetime(since.year, since.month, since.day)
-            params['createdAtSince'] = since.isoformat(timespec='seconds')
+            params['updatedAtSince'] = since.isoformat(timespec='seconds')
 
         limit = 500
         offset = 0
