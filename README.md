@@ -6,9 +6,19 @@ What sets it apart from other scripts like this is that it creates
 a `ComicInfo.xml` for Komga and it will also download any updated chapters
 to get the latest versions with fixes.
 
-## Configuration File
+## Installation
 
-The configuration file is YAML:
+Install using [pip]:
+
+```console
+$ python -m pip install mangadlmao
+```
+
+## Configuration
+
+You can get the location of the configuration file by running `mangadlmao -c`
+
+The configuration file format is YAML:
 
 ```yaml
 ---
@@ -36,3 +46,5 @@ manga:
     since: 2020-12-24
     # lang has no effect with MangaSee
 ```
+
+[pip]: https://pip.pypa.io/en/stable/
