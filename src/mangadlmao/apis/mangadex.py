@@ -65,6 +65,7 @@ class MangaDex:
             'translatedLanguage[]': languages,
             'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
             'includes[]': ['scanlation_group', 'user'],
+            'order[createdAt]': 'asc',
         }
         if since is not None:
             # convert date to datetime
@@ -195,7 +196,7 @@ class MangaDex:
         cover.close()
 
         chapters = self.get_manga_chapters(manga_id, languages, since)
-        for chapter in chapters:
+        for index, chapter in enumerate(chapters):
             scanlation_group = ''
             username = ''
             for r in chapter['relationships']:
@@ -215,21 +216,33 @@ class MangaDex:
                             a['title'], author, chapter_id, a['externalUrl'])
                 continue
 
-            if a['chapter'] is None:
-                logger.warning(
-                    'Chapter with title "%s" by "%s" has no chapter number, skipping. Chapter ID: %s',
-                    a['title'], author, chapter_id)
-                continue
+            if (chapter_number := a['chapter']) is None:
+                # guess a chapter number based on when this numberless chapter was created
+                previous_number = chapters[index - 1]['attributes']['chapter'] if index > 0 else None
+                next_number = chapters[index + 1]['attributes']['chapter'] if index + 1 < len(chapters) else None
+                try:
+                    if previous_number is not None and next_number is not None:
+                        chapter_number = f'{(float(previous_number) + float(next_number)) / 2:g}'
+                    elif previous_number is not None:
+                        chapter_number = f'{float(previous_number) + 0.2:g}'
+                    elif next_number is not None:
+                        chapter_number = f'{float(next_number) - 0.2:g}'
+                except ValueError:
+                    logger.warning(
+                        'Chapter with title "%s" by "%s" has no chapter number and guessing failed. '
+                        'Chapter ID: %s - Previous number: %s - Next number: %s',
+                        a['title'], author, chapter_id, previous_number, next_number)
+                    continue
 
             comic_info = {
                 'Title': a['title'],
-                'Number': a['chapter'],
+                'Number': chapter_number,
                 'Translator': author,
                 'Series': series_title,
                 'LanguageISO': a['translatedLanguage'],
             }
             updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
-            number = format_chapter_number(str(a['chapter']))
+            number = format_chapter_number(str(chapter_number))
             filename = sanitize_path(f"{number} - {author} {chapter_id} {updated}.cbz")
             filepath = dest_dir / filename
             if filepath.exists():
