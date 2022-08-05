@@ -27,6 +27,6 @@ def create_cbz(src_dir: str, dest_file: str, comic_info: dict[str]):
     with Path(src_dir, 'ComicInfo.xml').open('w') as f:
         f.write(generate_comic_info(comic_info))
     # zip everything in source directory
-    with ZipFile(dest_file, mode='a', compression=ZIP_STORED) as zf:
+    with ZipFile(dest_file, mode='w', compression=ZIP_STORED) as zf:
         for file in (x for x in Path(src_dir).iterdir() if x.is_file()):
             zf.write(file, file.name)
