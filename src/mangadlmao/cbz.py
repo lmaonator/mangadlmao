@@ -8,7 +8,7 @@ def generate_comic_info(comic_info: dict[str]):
     for key, value in comic_info.items():
         if value is not None:
             key = key[0].upper() + key[1:]
-            s += f'\t<{key}>{escape(value)}</{key}>\n'
+            s += f'\t<{key}>{escape(str(value))}</{key}>\n'
     s += '</ComicInfo>\n'
     return s
 
@@ -18,9 +18,9 @@ def create_cbz(src_dir: str, dest_file: str, comic_info: dict[str]):
     ComicInfo.xml is generated based on comic_info dict:
 
     comic_info = {
-        'Series': 'Tokyo Mew Mew',
+        'Series': 'Manga of the Apocalypse',
         'Number': 1,
-        'Title': 'Retasu Short Story',
+        'Title': 'The End of the World',
     }
     """
     # generate ComicInfo.xml in source directory
