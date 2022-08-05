@@ -253,3 +253,5 @@ class MangaDex:
                     create_cbz(tmpdir, filepath, comic_info)
             except RetryException:
                 pass
+            except requests.RequestException as e:
+                logger.warn('Download of chapter with title "%s" by "%s" failed: %s', a['title'], author, e)

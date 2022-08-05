@@ -80,6 +80,8 @@ class MangaSee:
             try:
                 with self.download_chapter(entry.link) as tmpdir:
                     create_cbz(tmpdir, filepath, comic_info)
+            except requests.RequestException as e:
+                logger.warn('Download of chapter with title "%s" failed: %s', entry.title, e)
             except Exception:
                 pass
 
