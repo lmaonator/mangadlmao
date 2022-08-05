@@ -21,22 +21,28 @@ class RetryException(Exception):
 class MangaDex:
     BASE_URL = "https://api.mangadex.org"
 
-    RATELIMIT = 0.5
-    """ Global ratelimit is 5 request per second per IP, leave some room for other apps """
-
     def __init__(self) -> None:
         self.s = requests.Session()
-        self.last_request = 0.0
+        self.last_requests = {}
 
     @contextmanager
-    def _request(self, *args, **kwargs):
+    def _request(self, method: str, url: str, *args, **kwargs):
         """ Wrapper around requests.Session.request with ratelimit """
-        time.sleep(max(0.0, self.last_request + self.RATELIMIT - time.monotonic()))
+        # Global ratelimit is 5 request per second per IP, leave some room
+        time.sleep(max(0.0, self.last_requests.get('global', 0.0) + 0.5 - time.monotonic()))
+        # per route ratelimits
+        if (route := '/at-home/server/') in url:
+            # /at-home/server/ ratelimit is 40 requests per minute, leave some room
+            time.sleep(max(0.0, self.last_requests.get(route, 0.0) + 2 - time.monotonic()))
+        else:
+            route = ''
         try:
-            with self.s.request(*args, **kwargs) as r:
+            with self.s.request(method, url, *args, **kwargs) as r:
                 yield r
         finally:
-            self.last_request = time.monotonic()
+            self.last_requests['global'] = time.monotonic()
+            if route:
+                self.last_requests[route] = time.monotonic()
 
     def get_manga_title_and_cover(self, manga_id: str) -> tuple[str, BytesIO]:
         with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}", params={
