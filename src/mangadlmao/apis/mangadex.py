@@ -222,22 +222,33 @@ class MangaDex:
                             a['title'], author, chapter_id, a['externalUrl'])
                 continue
 
+            # if chapter has no number, guess it based on its position in the list
             if (chapter_number := a['chapter']) is None:
-                # guess a chapter number based on when this numberless chapter was created
-                previous_number = chapters[index - 1]['attributes']['chapter'] if index > 0 else None
-                next_number = chapters[index + 1]['attributes']['chapter'] if index + 1 < len(chapters) else None
-                try:
-                    if previous_number is not None and next_number is not None:
-                        chapter_number = f'{(float(previous_number) + float(next_number)) / 2:g}'
-                    elif previous_number is not None:
-                        chapter_number = f'{float(previous_number) + 0.2:g}'
-                    elif next_number is not None:
-                        chapter_number = f'{float(next_number) - 0.2:g}'
-                except ValueError:
+                # get previous chapter number and distances to it (in case there are multiple numberless)
+                distance = None
+                for i in range(index - 1, -1, -1):
+                    if (chapter_number := chapters[i]['attributes']['chapter']) is not None:
+                        distance = index - i
+                        break
+                # if there was no previous chapter, try to get the following chapter number
+                if chapter_number is None:
+                    for i in range(index + 1, len(chapters)):
+                        if (chapter_number := chapters[i]['attributes']['chapter']) is not None:
+                            distance = index - i
+                            break
+                if chapter_number is not None:
+                    # try to offset chapter number based on distance, minimum 0.1 and maximum 0.9
+                    offset = min(0.9, max(0.1, 0.1 * distance))
+                    try:
+                        chapter_number = f'{float(chapter_number) + offset:g}'
+                    except ValueError:
+                        # do nothing if found number was not a number, just use it as is
+                        pass
+                else:
                     logger.warning(
                         'Chapter with title "%s" by "%s" has no chapter number and guessing failed. '
-                        'Chapter ID: %s - Previous number: %s - Next number: %s',
-                        a['title'], author, chapter_id, previous_number, next_number)
+                        'Chapter ID: %s - Guessed number: %s - Distance: %s',
+                        a['title'], author, chapter_id, chapter_number, distance)
                     continue
 
             comic_info = {
