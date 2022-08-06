@@ -1,9 +1,10 @@
 import json
 import logging
+import os
 import re
 import tempfile
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from time import mktime, strftime
 
@@ -38,13 +39,32 @@ class MangaSee:
         try:
             with self.s.get(d.feed.image.url, timeout=30.0) as r:
                 if r.ok:
-                    cover_name = 'cover.' + d.feed.image.url.rsplit('.', 1)[1]
-                    # delete old covers
-                    for c in dest_dir.glob('cover.*'):
-                        c.unlink(missing_ok=True)
-                    # save cover
-                    with (dest_dir / str(cover_name)).open('wb') as f:
-                        f.write(r.content)
+                    # parse last-modified time to timestamp
+                    try:
+                        modified = datetime.strptime(r.headers.get('last-modified'),
+                                                     '%a, %d %b %Y %H:%M:%S GMT').timestamp()
+                    except ValueError:
+                        modified = (datetime.now() - timedelta(days=365)).timestamp()
+
+                    cover_name: str = 'cover.' + d.feed.image.url.rsplit('.', 1)[1]
+                    cover_path = dest_dir / cover_name
+
+                    # get file modified timestamp
+                    try:
+                        file_modified = cover_path.stat().st_mtime
+                    except FileNotFoundError:
+                        file_modified = 0.0
+
+                    # only save downloaded cover if it is newer
+                    if file_modified < modified:
+                        # delete old covers
+                        for c in dest_dir.glob('cover.*'):
+                            c.unlink(missing_ok=True)
+                        # save cover
+                        with cover_path.open('wb') as f:
+                            f.write(r.content)
+                        # set last modified
+                        os.utime(cover_path, (modified, modified))
         except Exception:
             pass
 

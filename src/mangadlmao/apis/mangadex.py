@@ -1,8 +1,9 @@
 import logging
+import os
 import tempfile
 import time
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import Union
@@ -44,7 +45,7 @@ class MangaDex:
             if route:
                 self.last_requests[route] = time.monotonic()
 
-    def get_manga_title_and_cover(self, manga_id: str) -> tuple[str, BytesIO]:
+    def get_manga_title_and_cover(self, manga_id: str) -> tuple[str, Union[BytesIO, None], Union[float, None]]:
         with self._request('GET', f"{self.BASE_URL}/manga/{manga_id}", params={
             'includes[]': ['cover_art'],
         }) as r:
@@ -58,10 +59,19 @@ class MangaDex:
             cover_rel = next((x for x in data['relationships'] if x['type'] == 'cover_art'), None)
             cover_url = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
             with self.s.get(cover_url) as r:
-                cover = BytesIO(r.content)
-                cover.name = 'cover.' + cover_url.rsplit('.', 1)[1]
+                if r.ok:
+                    cover = BytesIO(r.content)
+                    cover.name = 'cover.' + cover_url.rsplit('.', 1)[1]
+                    try:
+                        cover_modified = datetime.strptime(r.headers.get('last-modified'),
+                                                           '%a, %d %b %Y %H:%M:%S GMT').timestamp()
+                    except ValueError:
+                        cover_modified = (datetime.now() - timedelta(days=365)).timestamp()
+                else:
+                    cover = None
+                    cover_modified = None
 
-            return (title, cover)
+            return (title, cover, cover_modified)
 
     def get_manga_chapters(self, manga_id: str, languages: list[str],
                            since: Union[datetime, date] = None) -> list[dict]:
@@ -183,7 +193,7 @@ class MangaDex:
     def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.'),
                        since: datetime = None):
         # get title and cover URL
-        series_title, cover = self.get_manga_title_and_cover(manga_id)
+        series_title, cover, cover_modified = self.get_manga_title_and_cover(manga_id)
 
         # override with user provided title
         if manga_title:
@@ -193,13 +203,25 @@ class MangaDex:
         dest_dir /= sanitize_path(series_title)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        # delete old covers
-        for c in dest_dir.glob('cover.*'):
-            c.unlink(missing_ok=True)
         # save cover
-        with (dest_dir / str(cover.name)).open('wb') as f:
-            f.write(cover.getbuffer())
-        cover.close()
+        if cover is not None:
+            cover_path = dest_dir / str(cover.name)
+            try:
+                file_modified = cover_path.stat().st_mtime
+            except FileNotFoundError:
+                file_modified = 0.0
+            # only save downloaded cover if it is newer
+            if file_modified < cover_modified:
+                if not cover_path.is_file() or None:
+                    # delete old covers
+                    for c in dest_dir.glob('cover.*'):
+                        c.unlink(missing_ok=True)
+                    # save cover
+                    with cover_path.open('wb') as f:
+                        f.write(cover.getbuffer())
+                    cover.close()
+                    # set last modified
+                    os.utime(cover_path, (cover_modified, cover_modified))
 
         chapters = self.get_manga_chapters(manga_id, languages, since)
         for index, chapter in enumerate(chapters):
