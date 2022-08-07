@@ -1,8 +1,8 @@
-import argparse
 from pathlib import Path
 from typing import Any
 
 import appdirs
+import click
 import yaml
 
 from mangadlmao.apis.mangadex import MangaDex
@@ -18,32 +18,29 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_config() -> dict[str, Any]:
-    try:
-        with CONFIG_FILE.open() as f:
-            config = yaml.safe_load(f)
-    except FileNotFoundError:
-        config = DEFAULT_CONFIG
-    return config
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', action='store_true',
-                        help="print location of configuration file")
-    args = parser.parse_args()
-    if args.config:
-        print(f"Configuration file: {CONFIG_FILE}")
+@click.command()
+@click.option('-c', '--config', is_flag=False, flag_value='', default=CONFIG_FILE, type=click.Path(),
+              help='print location of configuration file or use custom location')
+def main(config):
+    if config == '':
+        click.echo(f"Configuration file: {CONFIG_FILE}")
         return
+    else:
+        try:
+            with open(config) as f:
+                config = yaml.safe_load(f)
+        except FileNotFoundError:
+            if config != CONFIG_FILE:
+                raise
+            config = DEFAULT_CONFIG
 
-    config = load_config()
     download_dir = Path(config.get('download_directory'))
     if not download_dir.exists():
-        print(f'config error: download_directory does not exist: {download_dir}')
+        click.echo(f'config error: download_directory does not exist: {download_dir}')
         return
     default_languages = config.get('lang', DEFAULT_CONFIG['lang'])
     if not config.get('manga'):
-        print('No manga in configuration file')
+        click.echo('No manga in configuration file')
         return
 
     md = MangaDex()
@@ -53,10 +50,10 @@ def main():
         if 'id' in manga:
             # MangaDex
             lang = default_languages if not manga.get('lang') else manga.get('lang')
-            print(f"Downloading MangaDex manga {manga.get('title')} ({manga['id']}) in languages {', '.join(lang)}"
-                  f" to {download_dir}")
+            click.echo(f"Downloading MangaDex manga {manga.get('title')} ({manga['id']}) in languages "
+                       f"{', '.join(lang)} to {download_dir}")
             md.download_manga(manga['id'], manga.get('title'), lang, download_dir, since=manga.get('since'))
         elif 'rss' in manga:
             # MangaSee
-            print(f"Downloading MangaSee manga {manga.get('title')} ({manga['rss']}) to {download_dir}")
+            click.echo(f"Downloading MangaSee manga {manga.get('title')} ({manga['rss']}) to {download_dir}")
             ms.download_manga(manga['rss'], manga.get('title'), download_dir, since=manga.get('since'))
