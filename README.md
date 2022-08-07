@@ -17,6 +17,7 @@ $ python -m pip install mangadlmao
 ## Configuration
 
 You can get the location of the configuration file by running `mangadlmao -c`
+or specify a custom path with `mangadlmao --config=/custom/location/config.yml`
 
 The configuration file format is YAML:
 
