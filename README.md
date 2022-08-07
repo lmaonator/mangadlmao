@@ -42,7 +42,7 @@ manga:
 
   # entries with rss are currently treated as MangaSee entries
   - title: Manga 69
-    rss: https://mangasee123.com/rss/Manga-69.xml
+    rss: https://mangasee/rss/Manga-69.xml
     since: 2020-12-24
     # lang has no effect with MangaSee
 ```
