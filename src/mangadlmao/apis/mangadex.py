@@ -4,12 +4,12 @@ import time
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import requests
 from mangadlmao.cbz import create_cbz
-from mangadlmao.utils import (download_cover, format_chapter_number,
-                              sanitize_path)
+from mangadlmao.utils import (ProgressCallback, download_cover,
+                              format_chapter_number, sanitize_path)
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class MangaDex:
             yield Path(tmpdir)
 
     def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.'),
-                       since: datetime = None):
+                       since: Optional[datetime] = None, progress_callback: Optional[ProgressCallback] = None):
         # get title and cover URL
         series_title, cover_url = self.get_manga_title_and_cover(manga_id)
 
@@ -194,6 +194,13 @@ class MangaDex:
         download_cover(cover_url, dest_dir, self.s)
 
         chapters = self.get_manga_chapters(manga_id, languages, since)
+        if progress_callback:
+            progress_callback(length=len(chapters))
+
+        def progress_update(chapter: Optional[str] = None):
+            if progress_callback:
+                progress_callback(progress=1, chapter=chapter)
+
         for index, chapter in enumerate(chapters):
             scanlation_group = ''
             username = ''
@@ -212,6 +219,7 @@ class MangaDex:
             if a['externalUrl']:
                 logger.info('Skipping external chapter "%s" by "%s". Chapter ID: %s - URL: %s',
                             a['title'], author, chapter_id, a['externalUrl'])
+                progress_update()
                 continue
 
             # if chapter has no number, guess it based on its position in the list
@@ -241,6 +249,7 @@ class MangaDex:
                         'Chapter with title "%s" by "%s" has no chapter number and guessing failed. '
                         'Chapter ID: %s - Guessed number: %s - Distance: %s',
                         a['title'], author, chapter_id, chapter_number, distance)
+                    progress_update(f'{chapter_number} by {author}')
                     continue
 
             comic_info = {
@@ -256,6 +265,7 @@ class MangaDex:
             filepath = dest_dir / filename
             if filepath.exists():
                 logger.debug('Skipping already downloaded chapter: %s', filepath)
+                progress_update(f'{chapter_number} by {author}')
                 continue
             try:
                 with self.download_chapter(chapter_id) as tmpdir:
@@ -264,3 +274,4 @@ class MangaDex:
                 pass
             except requests.RequestException as e:
                 logger.warn('Download of chapter with title "%s" by "%s" failed: %s', a['title'], author, e)
+            progress_update(f'{chapter_number} by {author}')

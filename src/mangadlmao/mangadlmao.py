@@ -46,14 +46,28 @@ def main(config):
     md = MangaDex()
     ms = MangaSee()
     manga: dict[str, Any]
-    for manga in config.get('manga'):
+    for manga in config['manga']:
         if 'id' in manga:
             # MangaDex
             lang = default_languages if not manga.get('lang') else manga.get('lang')
             click.echo(f"Downloading MangaDex manga {manga.get('title')} ({manga['id']}) in languages "
                        f"{', '.join(lang)} to {download_dir}")
-            md.download_manga(manga['id'], manga.get('title'), lang, download_dir, since=manga.get('since'))
+            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
+                def callback(progress: int = None, length: int = None, chapter: str = None):
+                    if length is not None:
+                        bar.length = length
+                    if progress is not None:
+                        bar.update(progress, chapter)
+                md.download_manga(manga['id'], manga.get('title'), lang, download_dir, since=manga.get('since'),
+                                  progress_callback=callback)
         elif 'rss' in manga:
             # MangaSee
             click.echo(f"Downloading MangaSee manga {manga.get('title')} ({manga['rss']}) to {download_dir}")
-            ms.download_manga(manga['rss'], manga.get('title'), download_dir, since=manga.get('since'))
+            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
+                def callback(progress: int = None, length: int = None, chapter: str = None):
+                    if length is not None:
+                        bar.length = length
+                    if progress is not None:
+                        bar.update(progress, chapter)
+                ms.download_manga(manga['rss'], manga.get('title'), download_dir, since=manga.get('since'),
+                                  progress_callback=callback)

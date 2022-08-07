@@ -6,12 +6,13 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 from time import mktime, strftime
+from typing import Optional
 
 import feedparser
 import requests
 from mangadlmao.cbz import create_cbz
-from mangadlmao.utils import (download_cover, format_chapter_number,
-                              sanitize_path)
+from mangadlmao.utils import (ProgressCallback, download_cover,
+                              format_chapter_number, sanitize_path)
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,15 @@ class MangaSee:
         self.s = requests.Session()
 
     def download_manga(self, rss_url: str, manga_title: str = "", dest_dir: Path = Path('.'),
-                       since: datetime = None):
+                       since: Optional[datetime] = None, progress_callback: Optional[ProgressCallback] = None):
         try:
             with self.s.get(rss_url, timeout=30.0) as r:
                 d = feedparser.parse(r.text)
         except requests.RequestException:
             return
+
+        if progress_callback:
+            progress_callback(length=len(d.entries))
 
         if not manga_title:
             manga_title = d.feed.title
@@ -43,29 +47,35 @@ class MangaSee:
             since = datetime(since.year, since.month, since.day)
 
         # download chapters
-        for entry in d.entries:
+        def progress_update(chapter: Optional[str] = None):
+            if progress_callback:
+                progress_callback(progress=1, chapter=chapter)
+
+        for entry in reversed(d.entries):
+            chapter_number = entry.guid.split("-")[-1]
+
             # skip chapters updated before <since>
             if since is not None:
                 updated = datetime.fromtimestamp(mktime(entry.updated_parsed))
                 if since >= updated:
                     # chapter was updated before since, skip
+                    progress_update(chapter_number)
                     continue
-
-            number = entry.guid.split("-")[-1]
 
             comic_info = {
                 'Title': entry.title,
-                'Number': number,
+                'Number': chapter_number,
                 'Translator': 'MangaSee',
                 'Series': manga_title,
                 'LanguageISO': 'en',
             }
             updated = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
-            number = format_chapter_number(number)
+            number = format_chapter_number(chapter_number)
             filename = sanitize_path(f"{number} - MangaSee {updated}.cbz")
             filepath = dest_dir / filename
             if filepath.exists():
                 logger.debug('Skipping already downloaded chapter: %s', filepath)
+                progress_update(chapter_number)
                 continue
             try:
                 with self.download_chapter(entry.link) as tmpdir:
@@ -74,6 +84,7 @@ class MangaSee:
                 logger.warn('Download of chapter with title "%s" failed: %s', entry.title, e)
             except Exception:
                 pass
+            progress_update(chapter_number)
 
     @contextmanager
     def download_chapter(self, chapter_url: str, since: datetime = None):

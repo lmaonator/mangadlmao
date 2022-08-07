@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Union
+from typing import Any, Optional, Protocol, Union
 
 import requests
 
@@ -60,3 +60,8 @@ def download_cover(url: str, dest_dir: Path, session: requests.Session = None):
                     os.utime(cover_path, (modified, modified))
     except requests.RequestException:
         pass
+
+
+class ProgressCallback(Protocol):
+    def __call__(self, progress: Optional[str] = None, chapter: Optional[str]
+                 = None, length: Optional[int] = None) -> Any: ...
