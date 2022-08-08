@@ -106,7 +106,7 @@ class MangaDex:
         try:
             logger.debug('Downloading chapter page %s from URL %s', page, url)
             start_time = time.monotonic()
-            with self.s.get(url, timeout=30, stream=True) as r:
+            with requests.get(url, timeout=30, stream=True) as r:
                 with open(Path(tmpdir, Path(page).name), 'wb') as fd:
                     for chunk in r.iter_content(chunk_size=64 * 1024):
                         fd.write(chunk)
@@ -136,7 +136,7 @@ class MangaDex:
                      url, success, cached, num_bytes, duration)
 
         try:
-            with self.s.post('https://api.mangadex.network/report', json={
+            with requests.post('https://api.mangadex.network/report', json={
                 'url': url,
                 'success': success,
                 'cached': cached,
