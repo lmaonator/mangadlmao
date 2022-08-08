@@ -48,5 +48,8 @@ manga:
     # lang has no effect with MangaSee
 ```
 
-[Komga]: https://komga.org/
+The `title` key is optional but because it is used as directory name, if the name changes
+server-side, all chapters will be re-downloaded into a new directory.
+
+[komga]: https://komga.org/
 [pip]: https://pip.pypa.io/en/stable/
