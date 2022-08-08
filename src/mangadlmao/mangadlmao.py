@@ -38,7 +38,7 @@ def main(config: str, jobs: int):
 
     download_dir = Path(config.get('download_directory'))
     if not download_dir.exists():
-        click.echo(f'config error: download_directory does not exist: {download_dir}')
+        click.echo(f'config error: download_directory does not exist: {download_dir}', err=True)
         return
     default_languages = config.get('lang', DEFAULT_CONFIG['lang'])
     if not config.get('manga'):
