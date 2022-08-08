@@ -22,7 +22,8 @@ class RetryException(Exception):
 class MangaDex:
     BASE_URL = "https://api.mangadex.org"
 
-    def __init__(self) -> None:
+    def __init__(self, max_workers: int = 4) -> None:
+        self.max_workers = max_workers
         self.s = requests.Session()
         self.last_requests = {}
 
@@ -168,7 +169,7 @@ class MangaDex:
                 url_prefix = f'{base_url}/data/{chapter_hash}/'
 
                 # download in parallel
-                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                     # submit and save a mapping future -> page
                     future_to_page: dict[concurrent.futures.Future[bool], str] = {}
                     for page in pages:

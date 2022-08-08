@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class MangaSee:
-    def __init__(self) -> None:
+    def __init__(self, max_workers: int = 4) -> None:
+        self.max_workers = max_workers
         self.s = requests.Session()
 
     def download_manga(self, rss_url: str, manga_title: str = "", dest_dir: Path = Path('.'),
@@ -108,7 +109,7 @@ class MangaSee:
 
                 # download pages
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                         futures = []
                         for page in range(1, int(cur_chapter['Page']) + 1):
                             url = f"https://{domain}/manga/{index_name}/{number}-{page:03d}.png"

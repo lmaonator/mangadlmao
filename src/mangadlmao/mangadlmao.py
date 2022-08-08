@@ -20,15 +20,16 @@ DEFAULT_CONFIG = {
 
 @click.command()
 @click.option('-c', '--config', is_flag=False, flag_value='', default=CONFIG_FILE, type=click.Path(),
-              help='print location of configuration file or use custom location')
-def main(config):
+              help='Print or set configuration file path.')
+@click.option('-j', '--jobs', default=4, show_default=True, help='Number of parallel chapter page downloads.')
+def main(config: str, jobs: int):
     if config == '':
         click.echo(f"Configuration file: {CONFIG_FILE}")
         return
     else:
         try:
             with open(config) as f:
-                config = yaml.safe_load(f)
+                config: dict[str, Any] = yaml.safe_load(f)
         except FileNotFoundError:
             if config != CONFIG_FILE:
                 raise
@@ -43,8 +44,8 @@ def main(config):
         click.echo('No manga in configuration file')
         return
 
-    md = MangaDex()
-    ms = MangaSee()
+    md = MangaDex(max_workers=jobs)
+    ms = MangaSee(max_workers=jobs)
     manga: dict[str, Any]
     for manga in config['manga']:
         if 'id' in manga:
