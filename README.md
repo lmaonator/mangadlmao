@@ -30,16 +30,17 @@ lang:
   - en
 
 manga:
+  # entries with url can be either MangaDex or MangaSee
+  - url: https://mangadex.org/title/15931821-1a3a-4aee-b27c-1c95d8d5dcf1/hololive-yohane-s-twitter-shorts
+    title: Hololive Shorts by Yohane
+    # skip chapters uploaded before specified date:
+    since: 2020-12-24
+    # override default languages (only works for MangaDex):
+    lang: [en, de]
+
   # entries with id are treated as MangaDex entries
   - title: Nice Manga Title
     id: aed22b2e-b544-4204-9702-cdf5cfc167de
-    # skip chapters uploaded before specified date:
-    since: 2020-12-24
-
-  - title: Call of the Day
-    id: 251dfc8a-f05a-4825-8fa6-a2dhd7214230
-    # override default languages:
-    lang: [en, de]
 
   # entries with rss are currently treated as MangaSee entries
   - title: Manga 69

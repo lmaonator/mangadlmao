@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,24 @@ def main(config: str, jobs: int):
     ms = MangaSee(max_workers=jobs)
     manga: dict[str, Any]
     for manga in config['manga']:
+        if manga.get('url'):
+            # parse URL and populate id or rss entry
+            url: str = manga['url']
+            if 'https://mangadex.org/' in url:
+                if match := re.match(r'^https://mangadex\.org/title/([^/?#]+)', url, flags=re.IGNORECASE):
+                    manga['id'] = match.group(1)
+                else:
+                    click.echo(f'Malformed MangaDex URL {url} in manga entry: {manga}', err=True)
+            elif 'https://mangasee123.com/' in url:
+                rss = re.sub(r'^https://mangasee123\.com/manga/([^/?#]+)',
+                             r'https://mangasee123.com/rss/\g<1>.xml', url, 1, re.IGNORECASE)
+                if rss.endswith('.xml'):
+                    manga['rss'] = rss
+                else:
+                    click.echo(f'Malformed MangaSee URL {url} in manga entry: {manga}', err=True)
+            else:
+                click.echo(f'Unsupported URL {url} in manga entry: {manga}', err=True)
+
         if 'id' in manga:
             # MangaDex
             lang = default_languages if not manga.get('lang') else manga.get('lang')
