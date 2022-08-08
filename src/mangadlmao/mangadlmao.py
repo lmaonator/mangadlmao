@@ -23,8 +23,10 @@ DEFAULT_CONFIG = {
 @click.option('-c', '--config', is_flag=False, flag_value='', default=CONFIG_FILE, type=click.Path(),
               help='Print or set configuration file path.')
 @click.option('-j', '--jobs', default=4, show_default=True, help='Number of parallel chapter page downloads.')
+@click.option('-l', '--lang', multiple=True,
+              help='Language to download when URLs are given, can be provided multiple times.')
 @click.argument('url', nargs=-1)
-def main(config: str, jobs: int, url: tuple[str]):
+def main(config: str, jobs: int, lang: tuple[str], url: tuple[str]):
     """
     Download Manga from the configuration file or URL arguments.
     """
@@ -52,6 +54,9 @@ def main(config: str, jobs: int, url: tuple[str]):
     elif url:
         # overwrite manga list from configuration file with URL arguments
         config['manga'] = [{'url': x} for x in url]
+        # use provided languages if set
+        if lang:
+            default_languages = lang
 
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
