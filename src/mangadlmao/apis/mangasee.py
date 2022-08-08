@@ -1,3 +1,4 @@
+import concurrent.futures
 import json
 import logging
 import re
@@ -107,14 +108,19 @@ class MangaSee:
 
                 # download pages
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    for page in range(1, int(cur_chapter['Page']) + 1):
-                        url = f"https://{domain}/manga/{index_name}/{number}-{page:03d}.png"
-
-                        with self.s.get(url, stream=True) as page_result:
-                            with Path(tmpdir, f"{page:03d}.png").open('wb') as image_file:
-                                for chunk in page_result.iter_content(chunk_size=64 * 1024):
-                                    image_file.write(chunk)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                        futures = []
+                        for page in range(1, int(cur_chapter['Page']) + 1):
+                            url = f"https://{domain}/manga/{index_name}/{number}-{page:03d}.png"
+                            futures.append(executor.submit(self.download, url, page, tmpdir))
+                        concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
 
                     yield Path(tmpdir)
         finally:
             pass
+
+    def download(self, page_url: str, page_number: int, tmpdir: str):
+        with requests.get(page_url, timeout=30, stream=True) as page_result:
+            with Path(tmpdir, f"{page_number:03d}.png").open('wb') as image_file:
+                for chunk in page_result.iter_content(chunk_size=64 * 1024):
+                    image_file.write(chunk)
