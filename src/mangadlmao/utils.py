@@ -30,7 +30,7 @@ def format_chapter_number(number: str, count: int = 3, char: str = "0"):
 def download_cover(url: str, dest_dir: Path, session: requests.Session = None):
     s = session if session is not None else requests
     try:
-        with s.get(url, timeout=30.0) as r:
+        with s.get(url, timeout=30.0, stream=True) as r:
             if r.ok:
                 # parse last-modified time to timestamp
                 try:
@@ -55,7 +55,8 @@ def download_cover(url: str, dest_dir: Path, session: requests.Session = None):
                         c.unlink(missing_ok=True)
                     # save cover
                     with cover_path.open('wb') as f:
-                        f.write(r.content)
+                        for chunk in r.iter_content(chunk_size=64 * 1024):
+                            f.write(chunk)
                     # set last modified
                     os.utime(cover_path, (modified, modified))
     except requests.RequestException:
