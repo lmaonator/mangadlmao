@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import tempfile
 import time
@@ -99,12 +100,13 @@ class MangaDex:
             chapter_data = r.json()
         return chapter_data
 
-    def at_home_download_page(self, url: str, page: str, tmpdir: str):
+    def at_home_download_page(self, url_prefix: str, page: str, tmpdir: str):
+        url = url_prefix + page
         num_bytes = 0
         try:
             logger.debug('Downloading chapter page %s from URL %s', page, url)
             start_time = time.monotonic()
-            with self.s.get(url, stream=True) as r:
+            with self.s.get(url, timeout=30, stream=True) as r:
                 with open(Path(tmpdir, Path(page).name), 'wb') as fd:
                     for chunk in r.iter_content(chunk_size=64 * 1024):
                         fd.write(chunk)
@@ -133,14 +135,18 @@ class MangaDex:
         logger.debug('Reporting to MangaDex@Home: url: %s, success: %s, cached: %s, bytes: %s, duration: %s',
                      url, success, cached, num_bytes, duration)
 
-        with self.s.post('https://api.mangadex.network/report', json={
-            'url': url,
-            'success': success,
-            'cached': cached,
-            'bytes': num_bytes,
-            'duration': duration,
-        }) as r:
-            return r.ok
+        try:
+            with self.s.post('https://api.mangadex.network/report', json={
+                'url': url,
+                'success': success,
+                'cached': cached,
+                'bytes': num_bytes,
+                'duration': duration,
+            }, timeout=30) as r:
+                return r.ok
+        except requests.RequestException:
+            logger.debug('Exception while reporting to MangaDex@Home for url: %s', url, exc_info=1)
+            return False
 
     @contextmanager
     def download_chapter(self, chapter_id: str):
@@ -159,11 +165,23 @@ class MangaDex:
                     raise RetryException()
                 attempts += 1
                 failed_pages = []
-                # iterate and append failed pages to new list
-                for page in pages:
-                    url = '/'.join((base_url, 'data', chapter_hash, page))
-                    if not self.at_home_download_page(url, page, tmpdir):
-                        failed_pages.append(page)
+                url_prefix = f'{base_url}/data/{chapter_hash}/'
+
+                # download in parallel
+                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                    # submit and save a mapping future -> page
+                    future_to_page: dict[concurrent.futures.Future[bool], str] = {}
+                    for page in pages:
+                        future_to_page[executor.submit(self.at_home_download_page, url_prefix, page, tmpdir)] = page
+                    # iterate over results as they are completed, getting the original page from mapping
+                    for future in concurrent.futures.as_completed(future_to_page):
+                        page = future_to_page[future]
+                        try:
+                            fr = future.result()
+                        except Exception:
+                            fr = False
+                        if not fr:
+                            failed_pages.append(page)
 
                 if failed_pages:
                     logger.debug('Retrying to download failed pages: %s', ', '.join(failed_pages))
