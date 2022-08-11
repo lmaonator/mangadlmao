@@ -159,12 +159,7 @@ class MangaDex:
         logger.debug('Downloading chapter %s with hash %s from baseUrl %s', chapter_id, chapter_hash, base_url)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            attempts = 0
-            while True:
-                if attempts >= 3:
-                    logging.debug('Aborting chapter download after %s attempts', attempts)
-                    raise RetryException()
-                attempts += 1
+            for attempts in range(3):
                 failed_pages = []
                 url_prefix = f'{base_url}/data/{chapter_hash}/'
 
@@ -193,6 +188,9 @@ class MangaDex:
                     continue
                 else:
                     break
+            else:  # no break occurred, max retries reached
+                logging.debug('Aborting chapter download after %s attempts', attempts + 1)
+                raise RetryException()
 
             yield Path(tmpdir)
 
