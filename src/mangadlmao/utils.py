@@ -27,16 +27,16 @@ def format_chapter_number(number: str, count: int = 3, char: str = "0"):
     return char * num + number
 
 
-def download_cover(url: str, dest_dir: Path, session: requests.Session = None):
+def download_cover(url: str, dest_dir: Path, session: Optional[requests.Session] = None):
     s = session if session is not None else requests
     try:
         with s.get(url, timeout=30.0, stream=True) as r:
             if r.ok:
                 # parse last-modified time to timestamp
                 try:
-                    modified = datetime.strptime(r.headers.get('last-modified'),
+                    modified = datetime.strptime(r.headers['last-modified'],
                                                  '%a, %d %b %Y %H:%M:%S GMT').timestamp()
-                except ValueError:
+                except (KeyError, ValueError):
                     modified = (datetime.now() - timedelta(days=365)).timestamp()
 
                 cover_name: str = 'cover.' + url.rsplit('.', 1)[1]
@@ -64,5 +64,5 @@ def download_cover(url: str, dest_dir: Path, session: requests.Session = None):
 
 
 class ProgressCallback(Protocol):
-    def __call__(self, progress: Optional[str] = None, chapter: Optional[str]
-                 = None, length: Optional[int] = None) -> Any: ...
+    def __call__(self, progress: Optional[int] = None, length: Optional[int] = None,
+                 chapter: Optional[str] = None, ) -> Any: ...

@@ -1,9 +1,10 @@
 from pathlib import Path
+from typing import Any, Union
 from xml.sax.saxutils import escape
 from zipfile import ZIP_STORED, ZipFile
 
 
-def generate_comic_info(comic_info: dict[str]):
+def generate_comic_info(comic_info: dict[str, Any]):
     s = '<?xml version="1.0" encoding="UTF-8"?>\n<ComicInfo>\n'
     for key, value in comic_info.items():
         if value is not None:
@@ -13,7 +14,7 @@ def generate_comic_info(comic_info: dict[str]):
     return s
 
 
-def create_cbz(src_dir: str, dest_file: str, comic_info: dict[str]):
+def create_cbz(src_dir: Union[Path, str], dest_file: Union[Path, str], comic_info: dict[str, Any]):
     """
     ComicInfo.xml is generated based on comic_info dict:
 

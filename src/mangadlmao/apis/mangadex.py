@@ -5,7 +5,7 @@ import time
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 import requests
 from mangadlmao.cbz import create_cbz
@@ -57,13 +57,13 @@ class MangaDex:
                 title = data['attributes']['title'].get('ja-ro')
 
             # cover
-            cover_rel = next((x for x in data['relationships'] if x['type'] == 'cover_art'), None)
+            cover_rel = next((x for x in data['relationships'] if x['type'] == 'cover_art'))
             cover_url = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
 
             return (title, cover_url)
 
-    def get_manga_chapters(self, manga_id: str, languages: list[str],
-                           since: Union[datetime, date] = None) -> list[dict]:
+    def get_manga_chapters(self, manga_id: str, languages: Sequence[str],
+                           since: Union[datetime, date, None] = None) -> list[dict]:
         chapters = []
 
         params = {
@@ -104,22 +104,22 @@ class MangaDex:
     def at_home_download_page(self, url_prefix: str, page: str, tmpdir: str):
         url = url_prefix + page
         num_bytes = 0
+        logger.debug('Downloading chapter page %s from URL %s', page, url)
+        start_time = time.monotonic()
         try:
-            logger.debug('Downloading chapter page %s from URL %s', page, url)
-            start_time = time.monotonic()
             with requests.get(url, timeout=30, stream=True) as r:
                 with open(Path(tmpdir, Path(page).name), 'wb') as fd:
                     for chunk in r.iter_content(chunk_size=64 * 1024):
                         fd.write(chunk)
                         num_bytes = fd.tell()
-                success = True
-                response = r
+                try:
+                    self.at_home_report(True, url, num_bytes, start_time, r)
+                except requests.RequestException:
+                    pass
+                return True
         except requests.RequestException as e:
-            success = False
-            response = e.response
-        finally:
-            self.at_home_report(success, url, num_bytes, start_time, response)
-        return success
+            self.at_home_report(False, url, num_bytes, start_time, e.response)
+            return False
 
     def at_home_report(self, success: bool, url: str, num_bytes: int, start_time: float, response: requests.Response):
         # https://api.mangadex.org/docs/reading-chapter/
@@ -146,7 +146,7 @@ class MangaDex:
             }, timeout=30) as r:
                 return r.ok
         except requests.RequestException:
-            logger.debug('Exception while reporting to MangaDex@Home for url: %s', url, exc_info=1)
+            logger.debug('Exception while reporting to MangaDex@Home for url: %s', url, exc_info=True)
             return False
 
     @contextmanager
@@ -159,6 +159,7 @@ class MangaDex:
         logger.debug('Downloading chapter %s with hash %s from baseUrl %s', chapter_id, chapter_hash, base_url)
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            attempts = 0
             for attempts in range(3):
                 failed_pages = []
                 url_prefix = f'{base_url}/data/{chapter_hash}/'
@@ -194,7 +195,7 @@ class MangaDex:
 
             yield Path(tmpdir)
 
-    def download_manga(self, manga_id: str, manga_title: str, languages: list[str], dest_dir: Path = Path('.'),
+    def download_manga(self, manga_id: str, manga_title: str, languages: Sequence[str], dest_dir: Path = Path('.'),
                        since: Optional[datetime] = None, progress_callback: Optional[ProgressCallback] = None):
         # get title and cover URL
         series_title, cover_url = self.get_manga_title_and_cover(manga_id)
@@ -242,7 +243,7 @@ class MangaDex:
             # if chapter has no number, guess it based on its position in the list
             if (chapter_number := a['chapter']) is None:
                 # get previous chapter number and distances to it (in case there are multiple numberless)
-                distance = None
+                distance: int = 0
                 for i in range(index - 1, -1, -1):
                     if (chapter_number := chapters[i]['attributes']['chapter']) is not None:
                         distance = index - i

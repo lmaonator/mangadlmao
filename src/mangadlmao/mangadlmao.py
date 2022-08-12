@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import appdirs
 import click
@@ -8,6 +8,11 @@ import yaml
 
 from mangadlmao.apis.mangadex import MangaDex
 from mangadlmao.apis.mangasee import MangaSee
+
+from .utils import ProgressCallback
+
+if TYPE_CHECKING:
+    from click._termui_impl import ProgressBar
 
 APPNAME = "mangadlmao"
 CONFIG_DIR = Path(appdirs.user_config_dir(APPNAME))
@@ -36,25 +41,25 @@ def main(config: str, jobs: int, lang: tuple[str], url: tuple[str]):
     else:
         try:
             with open(config) as f:
-                config: dict[str, Any] = yaml.safe_load(f)
+                cfg = yaml.safe_load(f)
         except FileNotFoundError:
             if config != CONFIG_FILE:
                 raise
-            config = DEFAULT_CONFIG
+            cfg = DEFAULT_CONFIG
 
-    download_dir = Path(config.get('download_directory'))
+    download_dir = Path(cfg['download_directory'])
     if not download_dir.exists():
         click.secho(f"config error: download_directory does not exist: {click.style(download_dir, fg='red')}",
                     fg='yellow', err=True)
         return
-    default_languages = config.get('lang', DEFAULT_CONFIG['lang'])
+    default_languages = cfg.get('lang', DEFAULT_CONFIG['lang'])
 
-    if not url and not config.get('manga'):
+    if not url and not cfg.get('manga'):
         click.echo('No manga in configuration file and no URL argument given.')
         return
     elif url:
         # overwrite manga list from configuration file with URL arguments
-        config['manga'] = [{'url': x} for x in url]
+        cfg['manga'] = [{'url': x} for x in url]
         # use provided languages if set
         if lang:
             default_languages = lang
@@ -62,53 +67,52 @@ def main(config: str, jobs: int, lang: tuple[str], url: tuple[str]):
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
     manga: dict[str, Any]
-    for manga in config['manga']:
+    for manga in cfg['manga']:
         if manga.get('url'):
             # parse URL and populate id or rss entry
-            url: str = manga['url']
-            if 'https://mangadex.org/' in url:
-                if match := re.match(r'^https://mangadex\.org/title/([^/?#]+)', url, flags=re.IGNORECASE):
+            md_url: str = manga['url']
+            if 'https://mangadex.org/' in md_url:
+                if match := re.match(r'^https://mangadex\.org/title/([^/?#]+)', md_url, flags=re.IGNORECASE):
                     manga['id'] = match.group(1)
                 else:
-                    click.secho(f"Malformed MangaDex URL {url} in manga entry: {click.style(manga, fg='red')}",
+                    click.secho(f"Malformed MangaDex URL {md_url} in manga entry: {click.style(manga, fg='red')}",
                                 fg='yellow', err=True)
-            elif 'https://mangasee123.com/' in url:
+            elif 'https://mangasee123.com/' in md_url:
                 rss = re.sub(r'^https://mangasee123\.com/manga/([^/?#]+)',
-                             r'https://mangasee123.com/rss/\g<1>.xml', url, 1, re.IGNORECASE)
+                             r'https://mangasee123.com/rss/\g<1>.xml', md_url, 1, re.IGNORECASE)
                 if rss.endswith('.xml'):
                     manga['rss'] = rss
                 else:
-                    click.secho(f"Malformed MangaSee URL {url} in manga entry: {click.style(manga, fg='red')}",
+                    click.secho(f"Malformed MangaSee URL {md_url} in manga entry: {click.style(manga, fg='red')}",
                                 fg='yellow', err=True)
             else:
-                click.secho(f"Unsupported URL {url} in manga entry: {click.style(manga, fg='red')}",
+                click.secho(f"Unsupported URL {md_url} in manga entry: {click.style(manga, fg='red')}",
                             fg='yellow', err=True)
 
         stitle = click.style(manga.get('title', 'without title'), fg='green')
         sdldir = click.style(download_dir, fg='magenta')
 
+        def get_bar_callback(bar: 'ProgressBar') -> ProgressCallback:
+            def callback(progress: Optional[int] = None, length: Optional[int] = None,
+                         chapter: Optional[str] = None):
+                if length is not None:
+                    bar.length = length
+                if progress is not None:
+                    bar.update(progress, chapter)
+            return callback
+
         if 'id' in manga:
             # MangaDex
-            lang = default_languages if not manga.get('lang') else manga.get('lang')
+            lang = default_languages if not manga.get('lang') else manga['lang']
 
             click.echo(f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
                        f" {click.style(', '.join(lang), fg='green')} to {sdldir}")
             with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
-                def callback(progress: int = None, length: int = None, chapter: str = None):
-                    if length is not None:
-                        bar.length = length
-                    if progress is not None:
-                        bar.update(progress, chapter)
-                md.download_manga(manga['id'], manga.get('title'), lang, download_dir, since=manga.get('since'),
-                                  progress_callback=callback)
+                md.download_manga(manga['id'], manga.get('title', ''), lang, download_dir, since=manga.get('since'),
+                                  progress_callback=get_bar_callback(bar))
         elif 'rss' in manga:
             # MangaSee
             click.echo(f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}")
             with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
-                def callback(progress: int = None, length: int = None, chapter: str = None):
-                    if length is not None:
-                        bar.length = length
-                    if progress is not None:
-                        bar.update(progress, chapter)
-                ms.download_manga(manga['rss'], manga.get('title'), download_dir, since=manga.get('since'),
-                                  progress_callback=callback)
+                ms.download_manga(manga['rss'], manga.get('title', ''), download_dir, since=manga.get('since'),
+                                  progress_callback=get_bar_callback(bar))
