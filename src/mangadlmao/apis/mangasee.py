@@ -55,10 +55,10 @@ class MangaSee:
 
         for entry in reversed(d.entries):
             chapter_number = entry.guid.split("-")[-1]
+            updated = datetime.fromtimestamp(mktime(entry.updated_parsed))
 
             # skip chapters updated before <since>
             if since is not None:
-                updated = datetime.fromtimestamp(mktime(entry.updated_parsed))
                 if since >= updated:
                     # chapter was updated before since, skip
                     progress_update(chapter_number)
@@ -70,6 +70,9 @@ class MangaSee:
                 'Translator': 'MangaSee',
                 'Series': manga_title,
                 'LanguageISO': 'en',
+                'Year': updated.year,
+                'Month': updated.month,
+                'Day': updated.day,
             }
             updated = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
             number = format_chapter_number(chapter_number)

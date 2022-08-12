@@ -269,16 +269,19 @@ class MangaDex:
                     progress_update(f'{chapter_number} by {author}')
                     continue
 
+            updated = datetime.fromisoformat(a['updatedAt'])
             comic_info = {
                 'Title': a['title'],
                 'Number': chapter_number,
                 'Translator': author,
                 'Series': series_title,
                 'LanguageISO': a['translatedLanguage'],
+                'Year': updated.year,
+                'Month': updated.month,
+                'Day': updated.day,
             }
-            updated = str(a['updatedAt']).replace(':', '-').split('+', 1)[0]
             number = format_chapter_number(str(chapter_number))
-            filename = sanitize_path(f"{number} - {author} {chapter_id} {updated}.cbz")
+            filename = sanitize_path(f"{number} - {author} {chapter_id} {updated:%Y-%m-%dT%H-%M-%S}.cbz")
             filepath = dest_dir / filename
             if filepath.exists():
                 logger.debug('Skipping already downloaded chapter: %s', filepath)
