@@ -29,6 +29,11 @@ download_directory: "."
 lang:
   - en
 
+# global exclude for groups and users, can be name or id
+exclude:
+  - TerribleMachineTranslator
+  - 33171bc6-0c2a-40d7-9cca-120ac52f09ae
+
 manga:
   # entries with url can be either MangaDex or MangaSee
   - url: https://mangadex.org/title/15931821-1a3a-4aee-b27c-1c95d8d5dcf1/hololive-yohane-s-twitter-shorts
@@ -37,6 +42,9 @@ manga:
     since: 2020-12-24
     # override default languages (only works for MangaDex):
     lang: [en, de]
+    # additional group and user excludes (only works for MangaDex):
+    exclude:
+      - AnotherTerribleMachineTranslator
 
   # entries with id are treated as MangaDex entries
   - title: Nice Manga Title

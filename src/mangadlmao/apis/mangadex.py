@@ -190,13 +190,14 @@ class MangaDex:
                 else:
                     break
             else:  # no break occurred, max retries reached
-                logging.debug('Aborting chapter download after %s attempts', attempts + 1)
+                logger.debug('Aborting chapter download after %s attempts', attempts + 1)
                 raise RetryException()
 
             yield Path(tmpdir)
 
-    def download_manga(self, manga_id: str, manga_title: str, languages: Sequence[str], dest_dir: Path = Path('.'),
-                       since: Optional[datetime] = None, progress_callback: Optional[ProgressCallback] = None):
+    def download_manga(self, manga_id: str, manga_title: str, languages: Sequence[str], exclude: Sequence[str],
+                       dest_dir: Path = Path('.'), since: Optional[datetime] = None,
+                       progress_callback: Optional[ProgressCallback] = None):
         # get title and cover URL
         series_title, cover_url = self.get_manga_title_and_cover(manga_id)
 
@@ -219,16 +220,32 @@ class MangaDex:
             if progress_callback:
                 progress_callback(progress=1, chapter=chapter)
 
+        # caseless exclude comparison
+        exclude = [e.casefold() for e in exclude]
+
         for index, chapter in enumerate(chapters):
-            scanlation_group = ''
-            username = ''
+            scanlation_group: str = ''
+            user: str = ''
+            skip_excluded = False
             for r in chapter['relationships']:
                 if r['type'] == 'scanlation_group':
                     scanlation_group = r['attributes']['name']
+                    # skip excluded scanlation groups
+                    if any(x in (scanlation_group.casefold(), r['id'].casefold()) for x in exclude):
+                        logger.info('Skipping chapter from excluded scanlation group "%s" with ID %s',
+                                    scanlation_group, r['id'])
+                        skip_excluded = True
                 elif r['type'] == 'user':
-                    username = r['attributes']['username']
+                    user = r['attributes']['username']
+                    # skip excluded users
+                    if any(x in (user.casefold(), r['id'].casefold()) for x in exclude):
+                        logger.info('Skipping chapter from excluded user "%s" with ID %s', user, r['id'])
+                        skip_excluded = True
+            if skip_excluded:
+                progress_update()
+                continue
 
-            author = scanlation_group if scanlation_group else username
+            author = scanlation_group if scanlation_group else user
 
             chapter_id = chapter['id']
             a = chapter['attributes']

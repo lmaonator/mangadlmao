@@ -64,6 +64,8 @@ def main(config: str, jobs: int, lang: tuple[str], url: tuple[str]):
         if lang:
             default_languages = lang
 
+    global_exclude = cfg.get('exclude', [])
+
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
     manga: dict[str, Any]
@@ -104,12 +106,13 @@ def main(config: str, jobs: int, lang: tuple[str], url: tuple[str]):
         if 'id' in manga:
             # MangaDex
             lang = default_languages if not manga.get('lang') else manga['lang']
+            exclude = global_exclude + manga.get('exclude', [])
 
             click.echo(f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
                        f" {click.style(', '.join(lang), fg='green')} to {sdldir}")
             with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
-                md.download_manga(manga['id'], manga.get('title', ''), lang, download_dir, since=manga.get('since'),
-                                  progress_callback=get_bar_callback(bar))
+                md.download_manga(manga['id'], manga.get('title', ''), lang, exclude, download_dir,
+                                  since=manga.get('since'), progress_callback=get_bar_callback(bar))
         elif 'rss' in manga:
             # MangaSee
             click.echo(f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}")
