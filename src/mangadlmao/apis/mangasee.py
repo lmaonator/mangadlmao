@@ -18,6 +18,10 @@ from mangadlmao.utils import (ProgressCallback, download_cover,
 logger = logging.getLogger(__name__)
 
 
+class ChapterParseException(Exception):
+    pass
+
+
 class MangaSee:
     def __init__(self, max_workers: int = 4) -> None:
         self.max_workers = max_workers
@@ -85,6 +89,8 @@ class MangaSee:
             try:
                 with self.download_chapter(entry.link) as tmpdir:
                     create_cbz(tmpdir, filepath, comic_info)
+            except ChapterParseException as e:
+                logger.error('Download of chapter with title "%s" failed: %s', entry.title, e)
             except requests.RequestException as e:
                 logger.warn('Download of chapter with title "%s" failed: %s', entry.title, e)
             except Exception:
@@ -92,13 +98,21 @@ class MangaSee:
             progress_update(chapter_number)
 
     @contextmanager
-    def download_chapter(self, chapter_url: str, since: datetime = None):
+    def download_chapter(self, chapter_url: str):
         try:
             with self.s.get(chapter_url, timeout=30.0) as r:
-                m = re.search(r'\n\s+vm\.CurChapter = ({.+});\r?\n', r.text)
-                cur_chapter = json.loads(m.group(1))
-                domain = re.search(r'\n\s+vm\.CurPathName = \"(.+)\";\r?\n', r.text).group(1)
-                index_name = re.search(r'\n\s+vm\.IndexName = \"(.+)\";\r?\n', r.text).group(1)
+                if m := re.search(r'\n\s+vm\.CurChapter = ({.+});\r?\n', r.text):
+                    cur_chapter = json.loads(m.group(1))
+                else:
+                    raise ChapterParseException('CurChapter not found')
+                if m := re.search(r'\n\s+vm\.CurPathName = \"(.+)\";\r?\n', r.text):
+                    domain = m.group(1)
+                else:
+                    raise ChapterParseException('CurPathName not found')
+                if m := re.search(r'\n\s+vm\.IndexName = \"(.+)\";\r?\n', r.text):
+                    index_name = m.group(1)
+                else:
+                    raise ChapterParseException('IndexName not found')
 
                 # convert Chapter string to formatted chapter number:
                 #   100010 -> chapter 0001
