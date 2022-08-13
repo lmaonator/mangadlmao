@@ -14,6 +14,31 @@ Install using [pip]:
 $ python -m pip install mangadlmao
 ```
 
+## Usage
+
+This script is primarily meant to be used with a [configuration file](#configuration).
+
+However, there are some command line arguments that can be used:
+
+```console
+$ mangadlmao --help
+Usage: mangadlmao [OPTIONS] [URL]...
+
+  Download Manga from the configuration file or URL arguments.
+
+Options:
+  -c, --config PATH   Print or set configuration file path.
+  -j, --jobs INTEGER  Number of parallel chapter page downloads.  [default: 4]
+  -l, --lang TEXT     Language to download when URLs are given, can be
+                      provided multiple times.
+  -e, --exclude TEXT  Scanlation groups and users to exclude, can be provided
+                      multiple times.
+  --help              Show this message and exit.
+```
+
+The default download directory is the current directory. You can change it through the
+[configuration file](#configuration).
+
 ## Configuration
 
 You can get the location of the configuration file by running `mangadlmao -c`
