@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Union
 from xml.sax.saxutils import escape
@@ -31,3 +32,5 @@ def create_cbz(src_dir: Union[Path, str], dest_file: Union[Path, str], comic_inf
     with ZipFile(dest_file, mode='w', compression=ZIP_STORED) as zf:
         for file in (x for x in Path(src_dir).iterdir() if x.is_file()):
             zf.write(file, file.name)
+    # set modified time of directory to force a mergerfs cache update and prompt Komga to scan it
+    os.utime(Path(dest_file).parent)
