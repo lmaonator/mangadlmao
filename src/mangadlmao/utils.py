@@ -28,9 +28,9 @@ def format_chapter_number(number: str, count: int = 3, char: str = "0"):
 
 
 def download_cover(url: str, dest_dir: Path, session: Optional[requests.Session] = None):
-    s = session if session is not None else requests
+    get = session.get if session is not None else requests.get
     try:
-        with s.get(url, timeout=30.0, stream=True) as r:
+        with get(url, timeout=30.0, stream=True) as r:
             if r.ok:
                 # parse last-modified time to timestamp
                 try:

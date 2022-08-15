@@ -5,7 +5,7 @@ import time
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import Any, Optional, Sequence, Union
 
 import requests
 from mangadlmao.cbz import create_cbz
@@ -25,7 +25,7 @@ class MangaDex:
     def __init__(self, max_workers: int = 4) -> None:
         self.max_workers = max_workers
         self.s = requests.Session()
-        self.last_requests = {}
+        self.last_requests: dict[str, float] = {}
 
     @contextmanager
     def _request(self, method: str, url: str, *args, **kwargs):
@@ -66,7 +66,7 @@ class MangaDex:
                            since: Union[datetime, date, None] = None) -> list[dict]:
         chapters = []
 
-        params = {
+        params: dict[str, Any] = {
             'translatedLanguage[]': languages,
             'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
             'includes[]': ['scanlation_group', 'user'],

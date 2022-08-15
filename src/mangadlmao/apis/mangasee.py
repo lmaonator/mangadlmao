@@ -78,9 +78,9 @@ class MangaSee:
                 'Month': updated.month,
                 'Day': updated.day,
             }
-            updated = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
+            updated_str = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
             number = format_chapter_number(chapter_number)
-            filename = sanitize_path(f"{number} - MangaSee {updated}.cbz")
+            filename = sanitize_path(f"{number} - MangaSee {updated_str}.cbz")
             filepath = dest_dir / filename
             if filepath.exists():
                 logger.debug('Skipping already downloaded chapter: %s', filepath)

@@ -112,12 +112,12 @@ def main(config: str, jobs: int, lang: tuple[str], exclude: tuple[str], url: tup
 
             click.echo(f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
                        f" {click.style(', '.join(lang), fg='green')} to {sdldir}")
-            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
+            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:  # type: ignore[misc]
                 md.download_manga(manga['id'], manga.get('title', ''), lang, manga_exclude, download_dir,
                                   since=manga.get('since'), progress_callback=get_bar_callback(bar))
         elif 'rss' in manga:
             # MangaSee
             click.echo(f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}")
-            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:
+            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:  # type: ignore[misc]
                 ms.download_manga(manga['rss'], manga.get('title', ''), download_dir, since=manga.get('since'),
                                   progress_callback=get_bar_callback(bar))
