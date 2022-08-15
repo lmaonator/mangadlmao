@@ -85,5 +85,27 @@ manga:
 The `title` key is optional but because it is used as directory name, if the name changes
 server-side, all chapters will be re-downloaded into a new directory.
 
+# Development
+
+Install the package as editable and install development dependencies from `requirements.txt`:
+
+```console
+$ python -m pip install -e .[dev]
+$ python -m pip install -r requirements.txt
+```
+
+Then install [pre-commit]:
+
+```console
+$ pre-commit install
+```
+
+Configure git to use the `.git-blame-ignore-revs` file:
+
+```console
+$ git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 [komga]: https://komga.org/
 [pip]: https://pip.pypa.io/en/stable/
+[pre-commit]: https://pre-commit.com/
