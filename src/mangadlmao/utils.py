@@ -8,9 +8,20 @@ import requests
 
 def sanitize_path(path: Union[str, Path]):
     # make path component windows compatible
-    return str(path).lstrip(". ").replace("/", "-").replace("\\", "-") \
-        .replace(":", "").replace("?", "").replace("*", "").replace("|", "") \
-        .replace("<", "_").replace(">", "_").replace("\"", "'").strip()
+    return (
+        str(path)
+        .lstrip(". ")
+        .replace("/", "-")
+        .replace("\\", "-")
+        .replace(":", "")
+        .replace("?", "")
+        .replace("*", "")
+        .replace("|", "")
+        .replace("<", "_")
+        .replace(">", "_")
+        .replace('"', "'")
+        .strip()
+    )
 
 
 def format_chapter_number(number: str, count: int = 3, char: str = "0"):
@@ -19,7 +30,7 @@ def format_chapter_number(number: str, count: int = 3, char: str = "0"):
     - 25.5 -> 025.5
     - 3 -> 003
     """
-    if (i := number.find('.')) > 0:
+    if (i := number.find(".")) > 0:
         integer_portion = number[:i]
     else:
         integer_portion = number
@@ -27,19 +38,22 @@ def format_chapter_number(number: str, count: int = 3, char: str = "0"):
     return char * num + number
 
 
-def download_cover(url: str, dest_dir: Path, session: Optional[requests.Session] = None):
+def download_cover(
+    url: str, dest_dir: Path, session: Optional[requests.Session] = None
+):
     get = session.get if session is not None else requests.get
     try:
         with get(url, timeout=30.0, stream=True) as r:
             if r.ok:
                 # parse last-modified time to timestamp
                 try:
-                    modified = datetime.strptime(r.headers['last-modified'],
-                                                 '%a, %d %b %Y %H:%M:%S GMT').timestamp()
+                    modified = datetime.strptime(
+                        r.headers["last-modified"], "%a, %d %b %Y %H:%M:%S GMT"
+                    ).timestamp()
                 except (KeyError, ValueError):
                     modified = (datetime.now() - timedelta(days=365)).timestamp()
 
-                cover_name: str = 'cover.' + url.rsplit('.', 1)[1]
+                cover_name: str = "cover." + url.rsplit(".", 1)[1]
                 cover_path = dest_dir / cover_name
 
                 # get file modified timestamp
@@ -51,10 +65,10 @@ def download_cover(url: str, dest_dir: Path, session: Optional[requests.Session]
                 # only save downloaded cover if it is newer
                 if file_modified < modified:
                     # delete old covers
-                    for c in dest_dir.glob('cover.*'):
+                    for c in dest_dir.glob("cover.*"):
                         c.unlink(missing_ok=True)
                     # save cover
-                    with cover_path.open('wb') as f:
+                    with cover_path.open("wb") as f:
                         for chunk in r.iter_content(chunk_size=64 * 1024):
                             f.write(chunk)
                     # set last modified
@@ -64,5 +78,10 @@ def download_cover(url: str, dest_dir: Path, session: Optional[requests.Session]
 
 
 class ProgressCallback(Protocol):
-    def __call__(self, progress: Optional[int] = None, length: Optional[int] = None,
-                 chapter: Optional[str] = None, ) -> Any: ...
+    def __call__(
+        self,
+        progress: Optional[int] = None,
+        length: Optional[int] = None,
+        chapter: Optional[str] = None,
+    ) -> Any:
+        ...

@@ -12,8 +12,12 @@ from typing import Optional
 import feedparser
 import requests
 from mangadlmao.cbz import create_cbz
-from mangadlmao.utils import (ProgressCallback, download_cover,
-                              format_chapter_number, sanitize_path)
+from mangadlmao.utils import (
+    ProgressCallback,
+    download_cover,
+    format_chapter_number,
+    sanitize_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +31,14 @@ class MangaSee:
         self.max_workers = max_workers
         self.s = requests.Session()
 
-    def download_manga(self, rss_url: str, manga_title: str = "", dest_dir: Path = Path('.'),
-                       since: Optional[datetime] = None, progress_callback: Optional[ProgressCallback] = None):
+    def download_manga(
+        self,
+        rss_url: str,
+        manga_title: str,
+        dest_dir: Path,
+        since: Optional[datetime] = None,
+        progress_callback: Optional[ProgressCallback] = None,
+    ):
         try:
             with self.s.get(rss_url, timeout=30.0) as r:
                 d = feedparser.parse(r.text)
@@ -69,30 +79,34 @@ class MangaSee:
                     continue
 
             comic_info = {
-                'Title': entry.title,
-                'Number': chapter_number,
-                'Translator': 'MangaSee',
-                'Series': manga_title,
-                'LanguageISO': 'en',
-                'Year': updated.year,
-                'Month': updated.month,
-                'Day': updated.day,
+                "Title": entry.title,
+                "Number": chapter_number,
+                "Translator": "MangaSee",
+                "Series": manga_title,
+                "LanguageISO": "en",
+                "Year": updated.year,
+                "Month": updated.month,
+                "Day": updated.day,
             }
-            updated_str = strftime('%Y-%m-%dT%H-%M-%S', entry.updated_parsed)
+            updated_str = strftime("%Y-%m-%dT%H-%M-%S", entry.updated_parsed)
             number = format_chapter_number(chapter_number)
             filename = sanitize_path(f"{number} - MangaSee {updated_str}.cbz")
             filepath = dest_dir / filename
             if filepath.exists():
-                logger.debug('Skipping already downloaded chapter: %s', filepath)
+                logger.debug("Skipping already downloaded chapter: %s", filepath)
                 progress_update(chapter_number)
                 continue
             try:
                 with self.download_chapter(entry.link) as tmpdir:
                     create_cbz(tmpdir, filepath, comic_info)
             except ChapterParseException as e:
-                logger.error('Download of chapter with title "%s" failed: %s', entry.title, e)
+                logger.error(
+                    'Download of chapter with title "%s" failed: %s', entry.title, e
+                )
             except requests.RequestException as e:
-                logger.warn('Download of chapter with title "%s" failed: %s', entry.title, e)
+                logger.warn(
+                    'Download of chapter with title "%s" failed: %s', entry.title, e
+                )
             except Exception:
                 pass
             progress_update(chapter_number)
@@ -101,37 +115,43 @@ class MangaSee:
     def download_chapter(self, chapter_url: str):
         try:
             with self.s.get(chapter_url, timeout=30.0) as r:
-                if m := re.search(r'\n\s+vm\.CurChapter = ({.+});\r?\n', r.text):
+                if m := re.search(r"\n\s+vm\.CurChapter = ({.+});\r?\n", r.text):
                     cur_chapter = json.loads(m.group(1))
                 else:
-                    raise ChapterParseException('CurChapter not found')
-                if m := re.search(r'\n\s+vm\.CurPathName = \"(.+)\";\r?\n', r.text):
+                    raise ChapterParseException("CurChapter not found")
+                if m := re.search(r"\n\s+vm\.CurPathName = \"(.+)\";\r?\n", r.text):
                     domain = m.group(1)
                 else:
-                    raise ChapterParseException('CurPathName not found')
-                if m := re.search(r'\n\s+vm\.IndexName = \"(.+)\";\r?\n', r.text):
+                    raise ChapterParseException("CurPathName not found")
+                if m := re.search(r"\n\s+vm\.IndexName = \"(.+)\";\r?\n", r.text):
                     index_name = m.group(1)
                 else:
-                    raise ChapterParseException('IndexName not found')
+                    raise ChapterParseException("IndexName not found")
 
                 # convert Chapter string to formatted chapter number:
                 #   100010 -> chapter 0001
                 #   100165 -> chapter 0016.5
-                number = cur_chapter['Chapter'][1:]
+                number = cur_chapter["Chapter"][1:]
                 if number[-1] != "0":
-                    number = number[:-1] + '.' + number[-1]
+                    number = number[:-1] + "." + number[-1]
                 else:
                     number = number[:-1]
                 number = format_chapter_number(number, 4)
 
                 # download pages
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=self.max_workers
+                    ) as executor:
                         futures = []
-                        for page in range(1, int(cur_chapter['Page']) + 1):
+                        for page in range(1, int(cur_chapter["Page"]) + 1):
                             url = f"https://{domain}/manga/{index_name}/{number}-{page:03d}.png"
-                            futures.append(executor.submit(self.download, url, page, tmpdir))
-                        concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+                            futures.append(
+                                executor.submit(self.download, url, page, tmpdir)
+                            )
+                        concurrent.futures.wait(
+                            futures, return_when=concurrent.futures.FIRST_EXCEPTION
+                        )
 
                     yield Path(tmpdir)
         finally:
@@ -139,6 +159,6 @@ class MangaSee:
 
     def download(self, page_url: str, page_number: int, tmpdir: str):
         with requests.get(page_url, timeout=30, stream=True) as page_result:
-            with Path(tmpdir, f"{page_number:03d}.png").open('wb') as image_file:
+            with Path(tmpdir, f"{page_number:03d}.png").open("wb") as image_file:
                 for chunk in page_result.iter_content(chunk_size=64 * 1024):
                     image_file.write(chunk)

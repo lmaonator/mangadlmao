@@ -16,28 +16,51 @@ if TYPE_CHECKING:
 
 APPNAME = "mangadlmao"
 CONFIG_DIR = Path(appdirs.user_config_dir(APPNAME))
-CONFIG_FILE = CONFIG_DIR / 'config.yml'
+CONFIG_FILE = CONFIG_DIR / "config.yml"
 DEFAULT_CONFIG = {
-    'download_directory': '.',
-    'lang': ['en'],
-    'manga': [],
+    "download_directory": ".",
+    "lang": ["en"],
+    "manga": [],
 }
 
 
 @click.command()
-@click.option('-c', '--config', is_flag=False, flag_value='', default=CONFIG_FILE, type=click.Path(),
-              help='Print or set configuration file path.')
-@click.option('-j', '--jobs', default=4, show_default=True, help='Number of parallel chapter page downloads.')
-@click.option('-l', '--lang', multiple=True,
-              help='Language to download when URLs are given, can be provided multiple times.')
-@click.option('-e', '--exclude', multiple=True,
-              help='Scanlation groups and users to exclude, can be provided multiple times.')
-@click.argument('url', nargs=-1)
-def main(config: str, jobs: int, lang: tuple[str], exclude: tuple[str], url: tuple[str]):
+@click.option(
+    "-c",
+    "--config",
+    is_flag=False,
+    flag_value="",
+    default=CONFIG_FILE,
+    type=click.Path(),
+    help="Print or set configuration file path.",
+)
+@click.option(
+    "-j",
+    "--jobs",
+    default=4,
+    show_default=True,
+    help="Number of parallel chapter page downloads.",
+)
+@click.option(
+    "-l",
+    "--lang",
+    multiple=True,
+    help="Language to download when URLs are given, can be provided multiple times.",
+)
+@click.option(
+    "-e",
+    "--exclude",
+    multiple=True,
+    help="Scanlation groups and users to exclude, can be provided multiple times.",
+)
+@click.argument("url", nargs=-1)
+def main(
+    config: str, jobs: int, lang: tuple[str], exclude: tuple[str], url: tuple[str]
+):
     """
     Download Manga from the configuration file or URL arguments.
     """
-    if config == '':
+    if config == "":
         click.echo(f"Configuration file: {click.style(CONFIG_FILE, fg='magenta')}")
         return
     else:
@@ -49,75 +72,120 @@ def main(config: str, jobs: int, lang: tuple[str], exclude: tuple[str], url: tup
                 raise
             cfg = DEFAULT_CONFIG
 
-    download_dir = Path(cfg['download_directory'])
+    download_dir = Path(cfg.get("download_directory", "."))
     if not download_dir.exists():
-        click.secho(f"config error: download_directory does not exist: {click.style(download_dir, fg='red')}",
-                    fg='yellow', err=True)
+        click.secho(
+            f"config error: download_directory does not exist: {click.style(download_dir, fg='red')}",
+            fg="yellow",
+            err=True,
+        )
         return
-    default_languages = cfg.get('lang', DEFAULT_CONFIG['lang'])
+    default_languages = cfg.get("lang", DEFAULT_CONFIG["lang"])
 
-    if not url and not cfg.get('manga'):
-        click.echo('No manga in configuration file and no URL argument given.')
+    if not url and not cfg.get("manga"):
+        click.echo("No manga in configuration file and no URL argument given.")
         return
     elif url:
         # overwrite manga list from configuration file with URL arguments
-        cfg['manga'] = [{'url': x} for x in url]
+        cfg["manga"] = [{"url": x} for x in url]
         # use provided languages if set
         if lang:
             default_languages = lang
 
-    global_exclude = cfg.get('exclude', []) + list(exclude)
+    global_exclude = cfg.get("exclude", []) + list(exclude)
 
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
     manga: dict[str, Any]
-    for manga in cfg['manga']:
-        if manga.get('url'):
+    for manga in cfg["manga"]:
+        if manga.get("url"):
             # parse URL and populate id or rss entry
-            md_url: str = manga['url']
-            if 'https://mangadex.org/' in md_url:
-                if match := re.match(r'^https://mangadex\.org/title/([^/?#]+)', md_url, flags=re.IGNORECASE):
-                    manga['id'] = match.group(1)
+            md_url: str = manga["url"]
+            if "https://mangadex.org/" in md_url:
+                if match := re.match(
+                    r"^https://mangadex\.org/title/([^/?#]+)",
+                    md_url,
+                    flags=re.IGNORECASE,
+                ):
+                    manga["id"] = match.group(1)
                 else:
-                    click.secho(f"Malformed MangaDex URL {md_url} in manga entry: {click.style(manga, fg='red')}",
-                                fg='yellow', err=True)
-            elif 'https://mangasee123.com/' in md_url:
-                rss = re.sub(r'^https://mangasee123\.com/manga/([^/?#]+)',
-                             r'https://mangasee123.com/rss/\g<1>.xml', md_url, 1, re.IGNORECASE)
-                if rss.endswith('.xml'):
-                    manga['rss'] = rss
+                    click.secho(
+                        f"Malformed MangaDex URL {md_url} in manga entry: {click.style(manga, fg='red')}",
+                        fg="yellow",
+                        err=True,
+                    )
+            elif "https://mangasee123.com/" in md_url:
+                rss = re.sub(
+                    r"^https://mangasee123\.com/manga/([^/?#]+)",
+                    r"https://mangasee123.com/rss/\g<1>.xml",
+                    md_url,
+                    1,
+                    re.IGNORECASE,
+                )
+                if rss.endswith(".xml"):
+                    manga["rss"] = rss
                 else:
-                    click.secho(f"Malformed MangaSee URL {md_url} in manga entry: {click.style(manga, fg='red')}",
-                                fg='yellow', err=True)
+                    click.secho(
+                        f"Malformed MangaSee URL {md_url} in manga entry: {click.style(manga, fg='red')}",
+                        fg="yellow",
+                        err=True,
+                    )
             else:
-                click.secho(f"Unsupported URL {md_url} in manga entry: {click.style(manga, fg='red')}",
-                            fg='yellow', err=True)
+                click.secho(
+                    f"Unsupported URL {md_url} in manga entry: {click.style(manga, fg='red')}",
+                    fg="yellow",
+                    err=True,
+                )
 
-        stitle = click.style(manga.get('title', 'without title'), fg='green')
-        sdldir = click.style(download_dir, fg='magenta')
+        stitle = click.style(manga.get("title", "without title"), fg="green")
+        sdldir = click.style(download_dir, fg="magenta")
 
-        def get_bar_callback(bar: 'ProgressBar') -> ProgressCallback:
-            def callback(progress: Optional[int] = None, length: Optional[int] = None,
-                         chapter: Optional[str] = None):
+        def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
+            def callback(
+                progress: Optional[int] = None,
+                length: Optional[int] = None,
+                chapter: Optional[str] = None,
+            ):
                 if length is not None:
                     bar.length = length
                 if progress is not None:
                     bar.update(progress, chapter)
+
             return callback
 
-        if 'id' in manga:
+        if "id" in manga:
             # MangaDex
-            lang = default_languages if not manga.get('lang') else manga['lang']
-            manga_exclude = global_exclude + manga.get('exclude', [])
+            lang = default_languages if not manga.get("lang") else manga["lang"]
+            manga_exclude = global_exclude + manga.get("exclude", [])
 
-            click.echo(f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
-                       f" {click.style(', '.join(lang), fg='green')} to {sdldir}")
-            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:  # type: ignore[misc]
-                md.download_manga(manga['id'], manga.get('title', ''), lang, manga_exclude, download_dir,
-                                  since=manga.get('since'), progress_callback=get_bar_callback(bar))
-        elif 'rss' in manga:
+            click.echo(
+                f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
+                f" {click.style(', '.join(lang), fg='green')} to {sdldir}"
+            )
+            with click.progressbar(
+                length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
+            ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+                md.download_manga(
+                    manga["id"],
+                    manga.get("title", ""),
+                    lang,
+                    manga_exclude,
+                    download_dir,
+                    since=manga.get("since"),
+                    progress_callback=get_bar_callback(bar),
+                )
+        elif "rss" in manga:
             # MangaSee
-            click.echo(f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}")
-            with click.progressbar(length=1000, item_show_func=lambda n: f'Chapter {n}' if n else None) as bar:  # type: ignore[misc]
-                ms.download_manga(manga['rss'], manga.get('title', ''), download_dir, since=manga.get('since'),
-                                  progress_callback=get_bar_callback(bar))
+            click.echo(
+                f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}"
+            )
+            with click.progressbar(
+                length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
+            ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+                ms.download_manga(
+                    manga["rss"],
+                    manga.get("title", ""),
+                    download_dir,
+                    since=manga.get("since"),
+                    progress_callback=get_bar_callback(bar),
+                )

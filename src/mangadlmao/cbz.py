@@ -10,12 +10,14 @@ def generate_comic_info(comic_info: dict[str, Any]):
     for key, value in comic_info.items():
         if value is not None:
             key = key[0].upper() + key[1:]
-            s += f'\t<{key}>{escape(str(value))}</{key}>\n'
-    s += '</ComicInfo>\n'
+            s += f"\t<{key}>{escape(str(value))}</{key}>\n"
+    s += "</ComicInfo>\n"
     return s
 
 
-def create_cbz(src_dir: Union[Path, str], dest_file: Union[Path, str], comic_info: dict[str, Any]):
+def create_cbz(
+    src_dir: Union[Path, str], dest_file: Union[Path, str], comic_info: dict[str, Any]
+):
     """
     ComicInfo.xml is generated based on comic_info dict:
 
@@ -26,10 +28,10 @@ def create_cbz(src_dir: Union[Path, str], dest_file: Union[Path, str], comic_inf
     }
     """
     # generate ComicInfo.xml in source directory
-    with Path(src_dir, 'ComicInfo.xml').open('w') as f:
+    with Path(src_dir, "ComicInfo.xml").open("w") as f:
         f.write(generate_comic_info(comic_info))
     # zip everything in source directory
-    with ZipFile(dest_file, mode='w', compression=ZIP_STORED) as zf:
+    with ZipFile(dest_file, mode="w", compression=ZIP_STORED) as zf:
         for file in (x for x in Path(src_dir).iterdir() if x.is_file()):
             zf.write(file, file.name)
     # set modified time of directory to force a mergerfs cache update and prompt Komga to scan it
