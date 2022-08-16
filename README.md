@@ -90,7 +90,7 @@ server-side, all chapters will be re-downloaded into a new directory.
 Install the package as editable and install development dependencies from `requirements.txt`:
 
 ```console
-$ python -m pip install -e .[dev]
+$ python -m pip install -e .
 $ python -m pip install -r requirements.txt
 ```
 
