@@ -1,6 +1,7 @@
 import concurrent.futures
 import json
 import logging
+import os
 import re
 import tempfile
 from contextlib import contextmanager
@@ -88,17 +89,21 @@ class MangaSee:
                 "Month": updated.month,
                 "Day": updated.day,
             }
-            updated_str = strftime("%Y-%m-%dT%H-%M-%S", entry.updated_parsed)
+            published_str = strftime("%Y-%m-%d %H-%M-%S", entry.published_parsed)
             number = format_chapter_number(chapter_number)
-            filename = sanitize_path(f"{number} - MangaSee {updated_str}.cbz")
+            filename = sanitize_path(f"{number} - MangaSee {published_str}.cbz")
             filepath = dest_dir / filename
-            if filepath.exists():
+            if filepath.exists() and filepath.stat().st_mtime >= updated.timestamp():
                 logger.debug("Skipping already downloaded chapter: %s", filepath)
                 progress_update(chapter_number)
                 continue
             try:
                 with self.download_chapter(entry.link) as tmpdir:
                     create_cbz(tmpdir, filepath, comic_info)
+                    os.utime(filepath, (updated.timestamp(), updated.timestamp()))
+                    # set modified time of directory to force a mergerfs cache update
+                    # and prompt Komga to scan it
+                    os.utime(dest_dir)
             except ChapterParseException as e:
                 logger.error(
                     'Download of chapter with title "%s" failed: %s', entry.title, e

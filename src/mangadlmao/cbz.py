@@ -1,4 +1,5 @@
-import os
+import errno
+import shutil
 from pathlib import Path
 from typing import Any, Union
 from xml.sax.saxutils import escape
@@ -31,8 +32,15 @@ def create_cbz(
     with Path(src_dir, "ComicInfo.xml").open("w") as f:
         f.write(generate_comic_info(comic_info))
     # zip everything in source directory
-    with ZipFile(dest_file, mode="w", compression=ZIP_STORED) as zf:
-        for file in (x for x in Path(src_dir).iterdir() if x.is_file()):
+    temp_file = Path(src_dir, "temp.cbz")
+    files = [x for x in Path(src_dir).iterdir() if x.is_file()]
+    with ZipFile(temp_file, mode="w", compression=ZIP_STORED) as zf:
+        for file in files:
             zf.write(file, file.name)
-    # set modified time of directory to force a mergerfs cache update and prompt Komga to scan it
-    os.utime(Path(dest_file).parent)
+    try:
+        temp_file.replace(dest_file)
+    except OSError as e:
+        if e.errno == errno.EXDEV:
+            shutil.move(temp_file, dest_file)
+        else:
+            raise

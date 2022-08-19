@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import os
 import tempfile
 import time
 from contextlib import contextmanager
@@ -376,6 +377,7 @@ class MangaDex:
                     progress_update(f"{chapter_number} by {author}")
                     continue
 
+            created = datetime.fromisoformat(a["createdAt"])
             updated = datetime.fromisoformat(a["updatedAt"])
             comic_info = {
                 "Title": a["title"],
@@ -389,16 +391,20 @@ class MangaDex:
             }
             number = format_chapter_number(str(chapter_number))
             filename = sanitize_path(
-                f"{number} - {author} {chapter_id} {updated:%Y-%m-%dT%H-%M-%S}.cbz"
+                f"{number} - {author} {chapter_id} {created:%Y-%m-%d %H-%M-%S}.cbz"
             )
             filepath = dest_dir / filename
-            if filepath.exists():
+            if filepath.exists() and filepath.stat().st_mtime >= updated.timestamp():
                 logger.debug("Skipping already downloaded chapter: %s", filepath)
                 progress_update(f"{chapter_number} by {author}")
                 continue
             try:
                 with self.download_chapter(chapter_id) as tmpdir:
                     create_cbz(tmpdir, filepath, comic_info)
+                    os.utime(filepath, (updated.timestamp(), updated.timestamp()))
+                    # set modified time of directory to force a mergerfs cache update
+                    # and prompt Komga to scan it
+                    os.utime(dest_dir)
             except RetryException:
                 pass
             except requests.RequestException as e:
