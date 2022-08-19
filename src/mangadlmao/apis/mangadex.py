@@ -6,7 +6,7 @@ import time
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Literal, Optional, Sequence, Union
 
 import requests
 from mangadlmao.cbz import create_cbz
@@ -14,6 +14,7 @@ from mangadlmao.utils import (
     ProgressCallback,
     download_cover,
     format_chapter_number,
+    most_recent_modified,
     sanitize_path,
 )
 
@@ -261,7 +262,7 @@ class MangaDex:
         languages: Sequence[str],
         exclude: Sequence[str],
         dest_dir: Path,
-        since: Optional[datetime] = None,
+        since: Union[datetime, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
     ):
         # get title and cover URL
@@ -277,6 +278,9 @@ class MangaDex:
 
         # download cover
         download_cover(cover_url, dest_dir, self.s)
+
+        if since == "auto":
+            since = most_recent_modified(dest_dir)
 
         chapters = self.get_manga_chapters(manga_id, languages, since)
         if progress_callback:

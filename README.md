@@ -50,6 +50,12 @@ The configuration file format is YAML:
 ---
 download_directory: "."
 
+# default "since", can be null, a date, or auto (default: auto)
+# - null: download everything
+# - auto: download only chapters newer than the most recently created local chapter
+# - a date: eg.: 2022-02-22, only chapters updated after the date will be downloaded
+since: auto
+
 # default languages to download, can be overridden per manga
 lang:
   - en
@@ -63,7 +69,7 @@ manga:
   # entries with url can be either MangaDex or MangaSee
   - url: https://mangadex.org/title/15931821-1a3a-4aee-b27c-1c95d8d5dcf1/hololive-yohane-s-twitter-shorts
     title: Hololive Shorts by Yohane
-    # skip chapters uploaded before specified date:
+    # override default "since" setting:
     since: 2020-12-24
     # override default languages (only works for MangaDex):
     lang: [en, de]

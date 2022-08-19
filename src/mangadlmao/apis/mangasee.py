@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 from time import mktime, strftime
-from typing import Optional
+from typing import Literal, Optional, Union
 
 import feedparser
 import requests
@@ -17,6 +17,7 @@ from mangadlmao.utils import (
     ProgressCallback,
     download_cover,
     format_chapter_number,
+    most_recent_modified,
     sanitize_path,
 )
 
@@ -37,7 +38,7 @@ class MangaSee:
         rss_url: str,
         manga_title: str,
         dest_dir: Path,
-        since: Optional[datetime] = None,
+        since: Union[datetime, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
     ):
         try:
@@ -59,6 +60,8 @@ class MangaSee:
         # download cover
         download_cover(d.feed.image.url, dest_dir, self.s)
 
+        if since == "auto":
+            since = most_recent_modified(dest_dir)
         # convert date to datetime
         if isinstance(since, date) and not isinstance(since, datetime):
             since = datetime(since.year, since.month, since.day)

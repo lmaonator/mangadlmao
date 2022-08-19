@@ -85,3 +85,17 @@ class ProgressCallback(Protocol):
         chapter: Optional[str] = None,
     ) -> Any:
         ...
+
+
+def most_recent_modified(
+    directory: Path, pattern: str = "*.cbz"
+) -> Union[datetime, None]:
+    """
+    Returns the most recent modified time as `datetime` out of all files matching `pattern`
+    in `directory` or `None` if no files matched.
+    """
+    mtimes = sorted(
+        (x.stat().st_mtime for x in directory.glob(pattern) if x.is_file()),
+        reverse=True,
+    )
+    return datetime.fromtimestamp(mtimes[0]) if mtimes else None

@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 APPNAME = "mangadlmao"
 CONFIG_DIR = Path(appdirs.user_config_dir(APPNAME))
 CONFIG_FILE = CONFIG_DIR / "config.yml"
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "download_directory": ".",
+    "since": "auto",
     "lang": ["en"],
     "manga": [],
 }
@@ -64,13 +65,13 @@ def main(
         click.echo(f"Configuration file: {click.style(CONFIG_FILE, fg='magenta')}")
         return
     else:
+        cfg = DEFAULT_CONFIG
         try:
             with open(config) as f:
-                cfg = yaml.safe_load(f)
+                cfg.update(yaml.safe_load(f))
         except FileNotFoundError:
             if config != CONFIG_FILE:
                 raise
-            cfg = DEFAULT_CONFIG
 
     download_dir = Path(cfg.get("download_directory", "."))
     if not download_dir.exists():
@@ -139,6 +140,7 @@ def main(
 
         stitle = click.style(manga.get("title", "without title"), fg="green")
         sdldir = click.style(download_dir, fg="magenta")
+        since = manga.get("since", cfg["since"])
 
         def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
             def callback(
@@ -171,7 +173,7 @@ def main(
                     lang,
                     manga_exclude,
                     download_dir,
-                    since=manga.get("since"),
+                    since=since,
                     progress_callback=get_bar_callback(bar),
                 )
         elif "rss" in manga:
@@ -186,6 +188,6 @@ def main(
                     manga["rss"],
                     manga.get("title", ""),
                     download_dir,
-                    since=manga.get("since"),
+                    since=since,
                     progress_callback=get_bar_callback(bar),
                 )
