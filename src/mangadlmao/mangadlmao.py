@@ -1,6 +1,7 @@
 import re
+from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import appdirs
 import click
@@ -54,9 +55,23 @@ DEFAULT_CONFIG: dict[str, Any] = {
     multiple=True,
     help="Scanlation groups and users to exclude, can be provided multiple times.",
 )
+@click.option(
+    "-s",
+    "--since",
+    "since_opt",
+    default=None,
+    help="Download only chapters updated after specified date (eg.: 2022-02-22). If "
+    "set to 'auto', only chapters newer than the most recent will be downloaded. If "
+    "set to 'null' (default), all chapters will be downloaded.",
+)
 @click.argument("url", nargs=-1)
 def main(
-    config: str, jobs: int, lang: tuple[str], exclude: tuple[str], url: tuple[str]
+    config: str,
+    jobs: int,
+    lang: tuple[str],
+    exclude: tuple[str],
+    url: tuple[str],
+    since_opt: Optional[str],
 ):
     """
     Download Manga from the configuration file or URL arguments.
@@ -94,6 +109,18 @@ def main(
             default_languages = lang
 
     global_exclude = cfg.get("exclude", []) + list(exclude)
+
+    # overwrite global since with option
+    if since_opt == "auto":
+        cfg["since"] = "auto"
+    elif since_opt == "null":
+        cfg["since"] = None
+    elif since_opt is not None:
+        try:
+            cfg["since"] = datetime.fromisoformat(since_opt)
+        except ValueError:
+            click.secho(f"option error: '{since_opt}' is not a valid date", fg="red")
+            return -1
 
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
@@ -140,7 +167,7 @@ def main(
 
         stitle = click.style(manga.get("title", "without title"), fg="green")
         sdldir = click.style(download_dir, fg="magenta")
-        since = manga.get("since", cfg["since"])
+        since: Union[datetime, Literal["auto"], None] = manga.get("since", cfg["since"])
 
         def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
             def callback(
