@@ -39,6 +39,10 @@ Options:
                       provided multiple times.
   -e, --exclude TEXT  Scanlation groups and users to exclude, can be provided
                       multiple times.
+  -s, --since TEXT    Download only chapters updated after specified date
+                      (eg.: 2022-02-22). If set to 'auto', only chapters newer
+                      than the most recent will be downloaded. If set to
+                      'null' (default), all chapters will be downloaded.
   --help              Show this message and exit.
 ```
 
