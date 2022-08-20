@@ -6,6 +6,12 @@ What sets it apart from other scripts like this is that it creates
 a `ComicInfo.xml` for [Komga] and it will also download any updated chapters
 to get the latest versions with fixes.
 
+File modified times are used to track which chapters have already been downloaded.
+
+Note: The API for Semantic Versioning purposes is considered the configuration file and cli
+options. Every python module contained in this package is internal and subject to breaking
+changes at any time.
+
 ## Installation
 
 Install using [pip]:
