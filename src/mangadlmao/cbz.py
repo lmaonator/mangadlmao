@@ -9,7 +9,7 @@ from zipfile import ZIP_STORED, ZipFile
 def generate_comic_info(comic_info: dict[str, Any]):
     s = '<?xml version="1.0" encoding="UTF-8"?>\n<ComicInfo>\n'
     for key, value in comic_info.items():
-        if value is not None:
+        if value is not None and value != "":
             key = key[0].upper() + key[1:]
             s += f"\t<{key}>{escape(str(value))}</{key}>\n"
     s += "</ComicInfo>\n"
