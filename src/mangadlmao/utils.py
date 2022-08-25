@@ -22,9 +22,9 @@ def sanitize_path(path: Union[str, Path]):
     }
 
     def repl(match: re.Match[str]):
-        return repl_mapping.get(match.group(0), "")
+        return repl_mapping[match.group(0)]
 
-    p = re.sub(r"[/\\:?!|<>\"]", repl, str(path))
+    p = re.sub(r"[/\\:?*|<>\"]", repl, str(path))
     return re.sub(r"^[.\s]+|[.\s]+$", "", p)
 
 
