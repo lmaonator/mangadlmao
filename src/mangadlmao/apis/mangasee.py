@@ -5,7 +5,7 @@ import os
 import re
 import tempfile
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from time import mktime, strftime
 from typing import Literal, Optional, Union
@@ -73,7 +73,9 @@ class MangaSee:
 
         for entry in reversed(d.entries):
             chapter_number = entry.guid.split("-")[-1]
-            updated = datetime.fromtimestamp(mktime(entry.updated_parsed))
+            updated = datetime.fromtimestamp(
+                mktime(entry.updated_parsed), tz=timezone.utc
+            )
 
             # skip chapters updated before <since>
             if since is not None:

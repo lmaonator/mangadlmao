@@ -117,7 +117,7 @@ def main(
         cfg["since"] = None
     elif since_opt is not None:
         try:
-            cfg["since"] = datetime.fromisoformat(since_opt)
+            cfg["since"] = datetime.fromisoformat(since_opt).astimezone()
         except ValueError:
             click.secho(f"option error: '{since_opt}' is not a valid date", fg="red")
             return -1

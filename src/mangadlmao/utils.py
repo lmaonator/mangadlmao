@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Protocol, Union
 
@@ -102,4 +102,4 @@ def most_recent_modified(
         (x.stat().st_mtime for x in directory.glob(pattern) if x.is_file()),
         reverse=True,
     )
-    return datetime.fromtimestamp(mtimes[0]) if mtimes else None
+    return datetime.fromtimestamp(mtimes[0], tz=timezone.utc) if mtimes else None

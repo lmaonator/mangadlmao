@@ -5,7 +5,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, Union
 
@@ -304,9 +304,17 @@ class MangaDex:
         download_cover(details.cover_url, dest_dir, self.s)
 
         if since == "auto":
-            since = most_recent_modified(dest_dir)
+            if (most_recent := most_recent_modified(dest_dir)) is None:
+                most_recent = datetime.fromtimestamp(0, tz=timezone.utc)
+            since = most_recent
+        elif since is not None:
+            # convert date to datetime
+            if not isinstance(since, datetime):
+                since = datetime(since.year, since.month, since.day).astimezone()
+        else:
+            since = datetime.fromtimestamp(0, tz=timezone.utc)
 
-        chapters = self.get_manga_chapters(manga_id, languages, since)
+        chapters = self.get_manga_chapters(manga_id, languages)
         if progress_callback:
             progress_callback(length=len(chapters))
 
@@ -352,7 +360,13 @@ class MangaDex:
             translator = scanlation_group if scanlation_group else user
 
             chapter_id = chapter["id"]
-            a = chapter["attributes"]
+            a: dict[str, Any] = chapter["attributes"]
+
+            # skip chapters updated before <since>
+            updated = datetime.fromisoformat(a["updatedAt"])
+            if since >= updated:
+                progress_update()
+                continue
 
             # skip external chapters (MangaPlus, etc.)
             if a["externalUrl"]:
@@ -406,7 +420,6 @@ class MangaDex:
                     continue
 
             created = datetime.fromisoformat(a["createdAt"])
-            updated = datetime.fromisoformat(a["updatedAt"])
             comic_info = {
                 "Title": a["title"],
                 "Number": chapter_number,
