@@ -4,6 +4,7 @@ import os
 import tempfile
 import time
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, Union
@@ -56,27 +57,51 @@ class MangaDex:
             if route:
                 self.last_requests[route] = time.monotonic()
 
-    def get_manga_title_and_cover(self, manga_id: str) -> tuple[str, str]:
+    @dataclass
+    class MangaDetails:
+        title: str
+        cover_url: str
+        last_chapter: str
+        author: str
+        artist: str
+
+    def get_manga_details(self, manga_id: str) -> MangaDetails:
         with self._request(
             "GET",
             f"{self.BASE_URL}/manga/{manga_id}",
             params={
-                "includes[]": ["cover_art"],
+                "includes[]": ["cover_art", "author", "artist"],
             },
         ) as r:
-            data = r.json()["data"]
+            data: dict[str, Any] = r.json()["data"]
+            attributes: dict[str, Any] = data["attributes"]
             # title
-            title = data["attributes"]["title"].get("en")
+            title: str = attributes["title"].get("en", "")
             if not title:
-                title = data["attributes"]["title"].get("ja-ro")
+                title = attributes["title"].get("ja-ro", "")
+            if not title:
+                title = attributes["title"].get("ja", "")
 
             # cover
             cover_rel = next(
                 (x for x in data["relationships"] if x["type"] == "cover_art")
             )
-            cover_url = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
+            cover_url: str = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
 
-            return (title, cover_url)
+            last_chapter: str = attributes.get("lastChapter", "")
+
+            author = ",".join(
+                x["attributes"]["name"]
+                for x in data["relationships"]
+                if x["type"] == "author"
+            )
+            artist = ",".join(
+                x["attributes"]["name"]
+                for x in data["relationships"]
+                if x["type"] == "artist"
+            )
+
+            return self.MangaDetails(title, cover_url, last_chapter, author, artist)
 
     def get_manga_chapters(
         self,
@@ -265,19 +290,18 @@ class MangaDex:
         since: Union[datetime, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
     ):
-        # get title and cover URL
-        series_title, cover_url = self.get_manga_title_and_cover(manga_id)
+        details = self.get_manga_details(manga_id)
 
         # override with user provided title
         if manga_title:
-            series_title = manga_title
+            details.title = manga_title
 
         # prepare destination directory
-        dest_dir /= sanitize_path(series_title)
+        dest_dir /= sanitize_path(details.title)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         # download cover
-        download_cover(cover_url, dest_dir, self.s)
+        download_cover(details.cover_url, dest_dir, self.s)
 
         if since == "auto":
             since = most_recent_modified(dest_dir)
@@ -325,7 +349,7 @@ class MangaDex:
                 progress_update()
                 continue
 
-            author = scanlation_group if scanlation_group else user
+            translator = scanlation_group if scanlation_group else user
 
             chapter_id = chapter["id"]
             a = chapter["attributes"]
@@ -335,7 +359,7 @@ class MangaDex:
                 logger.info(
                     'Skipping external chapter "%s" by "%s". Chapter ID: %s - URL: %s',
                     a["title"],
-                    author,
+                    translator,
                     chapter_id,
                     a["externalUrl"],
                 )
@@ -373,12 +397,12 @@ class MangaDex:
                         'Chapter with title "%s" by "%s" has no chapter number and guessing failed. '
                         "Chapter ID: %s - Guessed number: %s - Distance: %s",
                         a["title"],
-                        author,
+                        translator,
                         chapter_id,
                         chapter_number,
                         distance,
                     )
-                    progress_update(f"{chapter_number} by {author}")
+                    progress_update(f"{chapter_number} by {translator}")
                     continue
 
             created = datetime.fromisoformat(a["createdAt"])
@@ -386,21 +410,24 @@ class MangaDex:
             comic_info = {
                 "Title": a["title"],
                 "Number": chapter_number,
-                "Translator": author,
-                "Series": series_title,
+                "Translator": translator,
                 "LanguageISO": a["translatedLanguage"],
                 "Year": updated.year,
                 "Month": updated.month,
                 "Day": updated.day,
+                "Series": details.title,
+                "Count": details.last_chapter,
+                "Writer": details.author,
+                "Penciller": details.artist,
             }
             number = format_chapter_number(str(chapter_number))
             filename = sanitize_path(
-                f"{number} - {author} {chapter_id} {created:%Y-%m-%d %H-%M-%S}.cbz"
+                f"{number} - {translator} {chapter_id} {created:%Y-%m-%d %H-%M-%S}.cbz"
             )
             filepath = dest_dir / filename
             if filepath.exists() and filepath.stat().st_mtime >= updated.timestamp():
                 logger.debug("Skipping already downloaded chapter: %s", filepath)
-                progress_update(f"{chapter_number} by {author}")
+                progress_update(f"{chapter_number} by {translator}")
                 continue
             try:
                 with self.download_chapter(chapter_id) as tmpdir:
@@ -415,7 +442,7 @@ class MangaDex:
                 logger.warn(
                     'Download of chapter with title "%s" by "%s" failed: %s',
                     a["title"],
-                    author,
+                    translator,
                     e,
                 )
-            progress_update(f"{chapter_number} by {author}")
+            progress_update(f"{chapter_number} by {translator}")
