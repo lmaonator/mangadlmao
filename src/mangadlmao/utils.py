@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional, Protocol, Union
@@ -8,20 +9,23 @@ import requests
 
 def sanitize_path(path: Union[str, Path]):
     # make path component windows compatible
-    return (
-        str(path)
-        .lstrip(". ")
-        .replace("/", "-")
-        .replace("\\", "-")
-        .replace(":", "")
-        .replace("?", "")
-        .replace("*", "")
-        .replace("|", "")
-        .replace("<", "_")
-        .replace(">", "_")
-        .replace('"', "'")
-        .strip()
-    )
+    repl_mapping = {
+        "/": "-",
+        "\\": "-",
+        ":": "",
+        "?": "",
+        "*": "",
+        "|": "",
+        "<": "_",
+        ">": "_",
+        '"': "'",
+    }
+
+    def repl(match: re.Match[str]):
+        return repl_mapping.get(match.group(0), "")
+
+    p = re.sub(r"[/\\:?!|<>\"]", repl, str(path))
+    return re.sub(r"^[.\s]+|[.\s]+$", "", p)
 
 
 def format_chapter_number(number: str, count: int = 3, char: str = "0"):
