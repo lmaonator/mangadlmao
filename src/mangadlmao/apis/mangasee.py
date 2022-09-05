@@ -109,17 +109,13 @@ class MangaSee:
                     # set modified time of directory to force a mergerfs cache update
                     # and prompt Komga to scan it
                     os.utime(dest_dir)
-            except ChapterParseException as e:
+            except (ChapterParseException, requests.RequestException, Exception) as e:
                 logger.error(
                     'Download of chapter with title "%s" failed: %s', entry.title, e
                 )
-            except requests.RequestException as e:
-                logger.warn(
-                    'Download of chapter with title "%s" failed: %s', entry.title, e
-                )
-            except Exception:
-                pass
-            progress_update(chapter_number)
+                return
+            finally:
+                progress_update(chapter_number)
 
     @contextmanager
     def download_chapter(self, chapter_url: str):

@@ -449,13 +449,13 @@ class MangaDex:
                     # set modified time of directory to force a mergerfs cache update
                     # and prompt Komga to scan it
                     os.utime(dest_dir)
-            except RetryException:
-                pass
-            except requests.RequestException as e:
+            except (RetryException, requests.RequestException) as e:
                 logger.warn(
                     'Download of chapter with title "%s" by "%s" failed: %s',
                     a["title"],
                     translator,
                     e,
                 )
-            progress_update(f"{chapter_number} by {translator}")
+                return
+            finally:
+                progress_update(f"{chapter_number} by {translator}")
