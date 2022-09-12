@@ -150,14 +150,17 @@ class MangaDex:
             chapter_data = r.json()
         return chapter_data
 
-    def at_home_download_page(self, url_prefix: str, page: str, tmpdir: str):
+    def at_home_download_page(
+        self, url_prefix: str, page: str, tmpdir: str, page_number: Optional[int] = None
+    ) -> bool:
+        page_number_str = "" if page_number is None else f"{page_number:03}-"
         url = url_prefix + page
         num_bytes = 0
         logger.debug("Downloading chapter page %s from URL %s", page, url)
         start_time = time.monotonic()
         try:
             with requests.get(url, timeout=30, stream=True) as r:
-                with open(Path(tmpdir, Path(page).name), "wb") as fd:
+                with open(Path(tmpdir, page_number_str + Path(page).name), "wb") as fd:
                     for chunk in r.iter_content(chunk_size=64 * 1024):
                         fd.write(chunk)
                         num_bytes = fd.tell()
@@ -245,10 +248,14 @@ class MangaDex:
                 ) as executor:
                     # submit and save a mapping future -> page
                     future_to_page: dict[concurrent.futures.Future[bool], str] = {}
-                    for page in pages:
+                    for index, page in enumerate(pages):
                         future_to_page[
                             executor.submit(
-                                self.at_home_download_page, url_prefix, page, tmpdir
+                                self.at_home_download_page,
+                                url_prefix,
+                                page,
+                                tmpdir,
+                                index + 1,
                             )
                         ] = page
                     # iterate over results as they are completed, getting the original page from mapping
