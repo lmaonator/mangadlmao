@@ -120,7 +120,9 @@ class MangaDex:
         if since is not None:
             # convert date to datetime
             if not isinstance(since, datetime):
-                since = datetime(since.year, since.month, since.day)
+                since = datetime(
+                    since.year, since.month, since.day, tzinfo=timezone.utc
+                )
             params["updatedAtSince"] = since.isoformat(timespec="seconds")
 
         limit = 500

@@ -64,7 +64,7 @@ class MangaSee:
             since = most_recent_modified(dest_dir)
         # convert date to datetime
         if isinstance(since, date) and not isinstance(since, datetime):
-            since = datetime(since.year, since.month, since.day)
+            since = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
 
         # download chapters
         def progress_update(chapter: Optional[str] = None):
