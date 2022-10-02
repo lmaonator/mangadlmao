@@ -464,5 +464,13 @@ class MangaDex:
                     e,
                 )
                 return
+            else:
+                # delete duplicate chapters with the same ID
+                for f in dest_dir.glob(f"* {chapter_id} *.cbz"):
+                    if f != filepath:
+                        logger.info(
+                            "Deleting duplicate chapter with the same ID: %s", f
+                        )
+                        f.unlink(missing_ok=True)
             finally:
                 progress_update(f"{chapter_number} by {translator}")
