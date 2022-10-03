@@ -71,6 +71,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "set to 'auto', only chapters newer than the most recent will be downloaded. If "
     "set to 'null' (default), all chapters will be downloaded.",
 )
+@click.option(
+    "-f",
+    "--from",
+    "from_opt",
+    default=None,
+    type=float,
+    help="Download only chapters starting from provided number",
+)
 @click.argument("url", nargs=-1)
 def main(
     config: str,
@@ -78,8 +86,9 @@ def main(
     lang: tuple[str],
     exclude: tuple[str],
     url: tuple[str],
-    since_opt: Optional[str],
     verbose: int,
+    since_opt: Optional[str],
+    from_opt: Optional[float],
 ):
     """
     Download Manga from the configuration file or URL arguments.
@@ -179,6 +188,9 @@ def main(
         stitle = click.style(manga.get("title", "without title"), fg="green")
         sdldir = click.style(download_dir, fg="magenta")
         since: Union[datetime, Literal["auto"], None] = manga.get("since", cfg["since"])
+        from_chapter: Union[float, None] = (
+            from_opt if from_opt is not None else manga.get("from", None)
+        )
 
         def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
             def callback(
@@ -213,6 +225,7 @@ def main(
                     download_dir,
                     since=since,
                     progress_callback=get_bar_callback(bar),
+                    from_chapter=from_chapter,
                 )
         elif "rss" in manga:
             # MangaSee
@@ -228,4 +241,5 @@ def main(
                     download_dir,
                     since=since,
                     progress_callback=get_bar_callback(bar),
+                    from_chapter=from_chapter,
                 )

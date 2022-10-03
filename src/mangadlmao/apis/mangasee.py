@@ -40,6 +40,7 @@ class MangaSee:
         dest_dir: Path,
         since: Union[datetime, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
+        from_chapter: Optional[float] = None,
     ):
         try:
             with self.s.get(rss_url, timeout=30.0) as r:
@@ -76,6 +77,19 @@ class MangaSee:
             updated = datetime.fromtimestamp(
                 mktime(entry.updated_parsed), tz=timezone.utc
             )
+
+            try:
+                if from_chapter is not None and float(chapter_number) < from_chapter:
+                    logger.debug(
+                        'Skipping chapter %s due to "from: %s"',
+                        chapter_number,
+                        from_chapter,
+                    )
+                    progress_update(chapter_number)
+                    continue
+            except ValueError:
+                # don't skip if chapter_number is not a number
+                pass
 
             # skip chapters updated before <since>
             if since is not None:

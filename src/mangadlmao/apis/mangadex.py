@@ -298,6 +298,7 @@ class MangaDex:
         dest_dir: Path,
         since: Union[datetime, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
+        from_chapter: Optional[float] = None,
     ):
         details = self.get_manga_details(manga_id)
 
@@ -427,6 +428,21 @@ class MangaDex:
                     )
                     progress_update(f"{chapter_number} by {translator}")
                     continue
+
+            try:
+                if from_chapter is not None and float(chapter_number) < from_chapter:
+                    logger.debug(
+                        'Skipping chapter %s with title "%s" by "%s" due to "from: %s"',
+                        chapter_number,
+                        a["title"],
+                        translator,
+                        from_chapter,
+                    )
+                    progress_update(f"{chapter_number} by {translator}")
+                    continue
+            except ValueError:
+                # don't skip if chapter_number is not a number
+                pass
 
             created = datetime.fromisoformat(a["createdAt"])
             comic_info = {

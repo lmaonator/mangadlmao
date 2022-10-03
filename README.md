@@ -44,6 +44,7 @@ Options:
                       (eg.: 2022-02-22). If set to 'auto', only chapters newer
                       than the most recent will be downloaded. If set to
                       'null' (default), all chapters will be downloaded.
+  -f, --from FLOAT    Download only chapters starting from provided number
   --help              Show this message and exit.
 ```
 
@@ -82,6 +83,8 @@ manga:
     title: Hololive Shorts by Yohane
     # override default "since" setting:
     since: 2020-12-24
+    # only download chapters starting from chapter number 69
+    from: 69
     # override default languages (only works for MangaDex):
     lang: [en, de]
     # additional group and user excludes (only works for MangaDex):
