@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
 
 @click.command()
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="More verbose messages",
+)
 @click.option(
     "-c",
     "--config",
@@ -72,10 +79,15 @@ def main(
     exclude: tuple[str],
     url: tuple[str],
     since_opt: Optional[str],
+    verbose: int,
 ):
     """
     Download Manga from the configuration file or URL arguments.
     """
+    log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+    logger = logging.getLogger()
+    logger.setLevel(log_levels[min(verbose, len(log_levels) - 1)])
+
     if config == "":
         click.echo(f"Configuration file: {click.style(CONFIG_FILE, fg='magenta')}")
         return

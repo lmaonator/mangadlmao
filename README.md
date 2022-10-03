@@ -33,6 +33,7 @@ Usage: mangadlmao [OPTIONS] [URL]...
   Download Manga from the configuration file or URL arguments.
 
 Options:
+  -v, --verbose       More verbose messages
   -c, --config PATH   Print or set configuration file path.
   -j, --jobs INTEGER  Number of parallel chapter page downloads.  [default: 4]
   -l, --lang TEXT     Language to download when URLs are given, can be
