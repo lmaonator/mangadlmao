@@ -85,8 +85,7 @@ def main(
     Download Manga from the configuration file or URL arguments.
     """
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
-    logger = logging.getLogger()
-    logger.setLevel(log_levels[min(verbose, len(log_levels) - 1)])
+    logging.basicConfig(level=log_levels[min(verbose, len(log_levels) - 1)])
 
     if config == "":
         click.echo(f"Configuration file: {click.style(CONFIG_FILE, fg='magenta')}")
