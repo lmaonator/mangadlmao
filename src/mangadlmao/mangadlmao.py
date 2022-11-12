@@ -149,7 +149,7 @@ def main(
         if manga.get("url"):
             # parse URL and populate id or rss entry
             md_url: str = manga["url"]
-            if "https://mangadex.org/" in md_url:
+            if "mangadex.org" in md_url:
                 if match := re.match(
                     r"^https://mangadex\.org/title/([^/?#]+)",
                     md_url,
@@ -162,9 +162,9 @@ def main(
                         fg="yellow",
                         err=True,
                     )
-            elif "https://mangasee123.com/" in md_url:
+            elif "mangasee123.com" in md_url:
                 rss = re.sub(
-                    r"^https://mangasee123\.com/manga/([^/?#]+)",
+                    r"^https://(?:www\.)?mangasee123\.com/manga/([^/?#]+)",
                     r"https://mangasee123.com/rss/\g<1>.xml",
                     md_url,
                     1,
