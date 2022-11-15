@@ -217,16 +217,19 @@ def main(
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
             ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
-                md.download_manga(
-                    manga["id"],
-                    manga.get("title", ""),
-                    lang,
-                    manga_exclude,
-                    download_dir,
-                    since=since,
-                    progress_callback=get_bar_callback(bar),
-                    from_chapter=from_chapter,
-                )
+                try:
+                    md.download_manga(
+                        manga["id"],
+                        manga.get("title", ""),
+                        lang,
+                        manga_exclude,
+                        download_dir,
+                        since=since,
+                        progress_callback=get_bar_callback(bar),
+                        from_chapter=from_chapter,
+                    )
+                except Exception as e:
+                    click.secho(f"Download failed: {e}", fg="red")
         elif "rss" in manga:
             # MangaSee
             click.echo(
@@ -235,11 +238,14 @@ def main(
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
             ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
-                ms.download_manga(
-                    manga["rss"],
-                    manga.get("title", ""),
-                    download_dir,
-                    since=since,
-                    progress_callback=get_bar_callback(bar),
-                    from_chapter=from_chapter,
-                )
+                try:
+                    ms.download_manga(
+                        manga["rss"],
+                        manga.get("title", ""),
+                        download_dir,
+                        since=since,
+                        progress_callback=get_bar_callback(bar),
+                        from_chapter=from_chapter,
+                    )
+                except Exception as e:
+                    click.secho(f"Download failed: {e}", fg="red")
