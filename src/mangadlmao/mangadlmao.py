@@ -9,6 +9,7 @@ import click
 import yaml
 
 from mangadlmao.apis.mangadex import MangaDex
+from mangadlmao.apis.mangaplus import MangaPlus
 from mangadlmao.apis.mangasee import MangaSee
 
 from .utils import ProgressCallback
@@ -144,6 +145,7 @@ def main(
 
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
+    mp = MangaPlus(max_workers=jobs)
     manga: dict[str, Any]
     for manga in cfg["manga"]:
         if manga.get("url"):
@@ -175,6 +177,15 @@ def main(
                 else:
                     click.secho(
                         f"Malformed MangaSee URL {md_url} in manga entry: {click.style(manga, fg='red')}",
+                        fg="yellow",
+                        err=True,
+                    )
+            elif "mangaplus.shueisha.co.jp" in md_url:
+                if manga_id := mp.match(md_url):
+                    manga["mangaplus_id"] = manga_id
+                else:
+                    click.secho(
+                        f"Malformed MangaPlus URL {md_url} in manga entry: {click.style(manga, fg='red')}",
                         fg="yellow",
                         err=True,
                     )
@@ -246,6 +257,22 @@ def main(
                         since=since,
                         progress_callback=get_bar_callback(bar),
                         from_chapter=from_chapter,
+                    )
+                except Exception as e:
+                    click.secho(f"Download failed: {e}", fg="red")
+        elif "mangaplus_id" in manga:
+            # MangaPlus
+            click.echo(
+                f"Downloading MangaPlus manga {stitle} ({click.style(manga['mangaplus_id'], fg='cyan')})"
+            )
+            with click.progressbar(length=1000) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+                try:
+                    mp.download_manga(
+                        manga["mangaplus_id"],
+                        download_dir,
+                        manga.get("title"),
+                        from_chapter,
+                        progress_callback=get_bar_callback(bar),
                     )
                 except Exception as e:
                     click.secho(f"Download failed: {e}", fg="red")
