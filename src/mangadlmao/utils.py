@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Protocol, Union
+from urllib.parse import urlparse
 
 import requests
 
@@ -57,7 +58,7 @@ def download_cover(
                 except (KeyError, ValueError):
                     modified = (datetime.now() - timedelta(days=365)).timestamp()
 
-                cover_name: str = "cover." + url.rsplit(".", 1)[1]
+                cover_name: str = "cover" + Path(urlparse(url).path).suffix
                 cover_path = dest_dir / cover_name
 
                 # get file modified timestamp
