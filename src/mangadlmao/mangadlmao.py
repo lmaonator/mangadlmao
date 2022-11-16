@@ -143,6 +143,8 @@ def main(
             click.secho(f"option error: '{since_opt}' is not a valid date", fg="red")
             return -1
 
+    click.echo(f"Download directory: {click.style(download_dir, fg='magenta')}")
+
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
     mp = MangaPlus(max_workers=jobs)
@@ -197,7 +199,6 @@ def main(
                 )
 
         stitle = click.style(manga.get("title", "without title"), fg="green")
-        sdldir = click.style(download_dir, fg="magenta")
         since: Union[datetime, Literal["auto"], None] = manga.get("since", cfg["since"])
         from_chapter: Union[float, None] = (
             from_opt if from_opt is not None else manga.get("from", None)
@@ -222,8 +223,8 @@ def main(
             manga_exclude = global_exclude + manga.get("exclude", [])
 
             click.echo(
-                f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) in languages"
-                f" {click.style(', '.join(lang), fg='green')} to {sdldir}"
+                f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) "
+                f"in languages {click.style(', '.join(lang), fg='green')}"
             )
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
@@ -244,7 +245,7 @@ def main(
         elif "rss" in manga:
             # MangaSee
             click.echo(
-                f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')}) to {sdldir}"
+                f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')})"
             )
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
