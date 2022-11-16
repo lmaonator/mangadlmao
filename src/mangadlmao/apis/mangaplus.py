@@ -50,10 +50,13 @@ class MangaPlus:
     def _request(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
         time.sleep(max(0.0, self._last_request + 1.0 - time.monotonic()))  # Ratelimit
         params["format"] = "json"
-        with self._session.get(
-            self.API_URL + endpoint, params=params, timeout=30.0
-        ) as r:
-            return r.json()
+        try:
+            with self._session.get(
+                self.API_URL + endpoint, params=params, timeout=30.0
+            ) as r:
+                return r.json()
+        finally:
+            self._last_request = time.monotonic()
 
     def match(self, url: str) -> Union[int, None]:
         """Matches URL against MangaPlus and returns the manga ID or None"""
