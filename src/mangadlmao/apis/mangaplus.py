@@ -173,6 +173,7 @@ class MangaPlus:
         manga_id: int,
         dest_dir: Path,
         title: Optional[str] = None,
+        since: Optional[datetime] = None,
         from_chapter: Optional[float] = None,
         progress_callback: Optional[ProgressCallback] = None,
     ):
@@ -188,6 +189,8 @@ class MangaPlus:
 
         last_chapter = math.floor(details.chapters[-1].number)
 
+        if since is not None:
+            details.chapters = [c for c in details.chapters if c.datetime >= since]
         if from_chapter is not None:
             details.chapters = [c for c in details.chapters if c.number >= from_chapter]
 

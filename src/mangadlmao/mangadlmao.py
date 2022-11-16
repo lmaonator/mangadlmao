@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
@@ -265,12 +265,20 @@ def main(
             click.echo(
                 f"Downloading MangaPlus manga {stitle} ({click.style(manga['mangaplus_id'], fg='cyan')})"
             )
-            with click.progressbar(length=1000) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+            # auto is not supported and convert date instances to datetime
+            if since == "auto":
+                since = None
+            elif isinstance(since, date) and not isinstance(since, datetime):
+                since = datetime(
+                    since.year, since.month, since.day, tzinfo=timezone.utc
+                )
+            with click.progressbar(length=1000) as bar:  # type: ignore[misc]
                 try:
                     mp.download_manga(
                         manga["mangaplus_id"],
                         download_dir,
                         manga.get("title"),
+                        since,
                         from_chapter,
                         progress_callback=get_bar_callback(bar),
                     )

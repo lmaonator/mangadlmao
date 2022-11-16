@@ -66,7 +66,6 @@ download_directory: "."
 # - null: download everything
 # - auto: download only chapters newer than the most recently created local chapter
 # - a date: eg.: 2022-02-22, only chapters updated after the date will be downloaded
-# note: does not work with MangaPlus
 since: auto
 
 # default languages to download, can be overridden per manga
@@ -82,7 +81,7 @@ manga:
   # entries with url can be either MangaDex, MangaSee, or MangaPlus
   - url: https://mangadex.org/title/15931821-1a3a-4aee-b27c-1c95d8d5dcf1/hololive-yohane-s-twitter-shorts
     title: Hololive Shorts by Yohane
-    # override default "since" setting (does not work with MangaPlus):
+    # override default "since" setting:
     since: 2020-12-24
     # only download chapters starting from chapter number 69
     from: 69
