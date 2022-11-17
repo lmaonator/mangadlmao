@@ -120,7 +120,9 @@ def main(
     default_languages = cfg.get("lang", DEFAULT_CONFIG["lang"])
 
     if not url and not cfg.get("manga"):
-        click.echo("No manga in configuration file and no URL argument given.")
+        click.echo(
+            "No manga in configuration file and no URL argument given.", err=True
+        )
         return
     elif url:
         # overwrite manga list from configuration file with URL arguments
@@ -140,7 +142,9 @@ def main(
         try:
             cfg["since"] = datetime.fromisoformat(since_opt).astimezone()
         except ValueError:
-            click.secho(f"option error: '{since_opt}' is not a valid date", fg="red")
+            click.secho(
+                f"option error: '{since_opt}' is not a valid date", fg="red", err=True
+            )
             return -1
 
     click.echo(f"Download directory: {click.style(download_dir, fg='magenta')}")
@@ -241,7 +245,7 @@ def main(
                         from_chapter=from_chapter,
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red")
+                    click.secho(f"Download failed: {e}", fg="red", err=True)
         elif "rss" in manga:
             # MangaSee
             click.echo(
@@ -260,7 +264,7 @@ def main(
                         from_chapter=from_chapter,
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red")
+                    click.secho(f"Download failed: {e}", fg="red", err=True)
         elif "mangaplus_id" in manga:
             # MangaPlus
             click.echo(
@@ -284,4 +288,4 @@ def main(
                         progress_callback=get_bar_callback(bar),
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red")
+                    click.secho(f"Download failed: {e}", fg="red", err=True)
