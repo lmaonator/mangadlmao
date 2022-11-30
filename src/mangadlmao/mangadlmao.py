@@ -226,8 +226,9 @@ def main(
             lang = default_languages if not manga.get("lang") else manga["lang"]
             manga_exclude = global_exclude + manga.get("exclude", [])
 
+            title = f"{stitle} ({click.style(manga['id'], fg='cyan')})"
             click.echo(
-                f"Downloading MangaDex manga {stitle} ({click.style(manga['id'], fg='cyan')}) "
+                f"Downloading MangaDex manga {title} "
                 f"in languages {click.style(', '.join(lang), fg='green')}"
             )
             with click.progressbar(
@@ -245,12 +246,11 @@ def main(
                         from_chapter=from_chapter,
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red", err=True)
+                    click.secho(f"Download of {title} failed: {e}", fg="red", err=True)
         elif "rss" in manga:
             # MangaSee
-            click.echo(
-                f"Downloading MangaSee manga {stitle} ({click.style(manga['rss'], fg='cyan')})"
-            )
+            title = f"{stitle}({click.style(manga['rss'], fg='cyan')})"
+            click.echo(f"Downloading MangaSee manga {title}")
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
             ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
@@ -264,12 +264,11 @@ def main(
                         from_chapter=from_chapter,
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red", err=True)
+                    click.secho(f"Download of {title} failed: {e}", fg="red", err=True)
         elif "mangaplus_id" in manga:
             # MangaPlus
-            click.echo(
-                f"Downloading MangaPlus manga {stitle} ({click.style(manga['mangaplus_id'], fg='cyan')})"
-            )
+            title = f"{stitle} ({click.style(manga['mangaplus_id'], fg='cyan')})"
+            click.echo(f"Downloading MangaPlus manga {title}")
             # auto is not supported and convert date instances to datetime
             if since == "auto":
                 since = None
@@ -288,4 +287,4 @@ def main(
                         progress_callback=get_bar_callback(bar),
                     )
                 except Exception as e:
-                    click.secho(f"Download failed: {e}", fg="red", err=True)
+                    click.secho(f"Download of {title} failed: {e}", fg="red", err=True)
