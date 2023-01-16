@@ -85,8 +85,27 @@ class MangaPlus:
         title = data["title"]
 
         chapters: list[MangaPlus.Chapter] = []
-        for c in data["firstChapterList"] + data.get("lastChapterList", []):
-            number = float(c["name"].lstrip("#"))
+        combined_list: list = data["firstChapterList"] + data.get("lastChapterList", [])
+        for index, c in enumerate(combined_list):
+            try:
+                number = float(c["name"].lstrip("#"))
+            except ValueError:
+                if match := re.match(
+                    r"^(?:[^\d\s])*\s?(\d+(?:\.\d+)?)", c["subTitle"], re.IGNORECASE
+                ):
+                    number = float(match.group(1))
+                else:
+                    # ...get it from adjacent chapters
+                    try:
+                        number = float(combined_list[index + 1]["name"].lstrip("#"))
+                        number -= 0.5
+                    except (ValueError, IndexError):
+                        if index - 1 >= 0:
+                            number = float(combined_list[index - 1]["name"].lstrip("#"))
+                            number += 0.5
+                        else:
+                            number = 0.5
+
             chapters.append(
                 MangaPlus.Chapter(
                     id=c["chapterId"],
