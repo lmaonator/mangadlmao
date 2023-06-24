@@ -151,8 +151,13 @@ class MangaPlus:
 
     def decrypt(self, encryption_key: str, image_bytes: bytes) -> bytes:
         key = bytearray.fromhex(encryption_key)
-        key_size = len(key)
-        return bytes(byte ^ key[i % key_size] for i, byte in enumerate(image_bytes))
+        try:
+            from xor_cipher import cyclic_xor
+
+            return cyclic_xor(image_bytes, bytes(key))
+        except ModuleNotFoundError:
+            key_size = len(key)
+            return bytes(byte ^ key[i % key_size] for i, byte in enumerate(image_bytes))
 
     def download_page(self, page: Page, tmpdir: str) -> bool:
         filename = f"{page.number:04}{Path(urlparse(page.image_url).path).suffix}"

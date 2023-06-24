@@ -17,7 +17,13 @@ changes at any time.
 Install using [pip]:
 
 ```console
-$ python -m pip install mangadlmao
+python -m pip install mangadlmao
+```
+
+Optionally you can install the [xor-cipher] package to speed up decryption:
+
+```console
+python -m pip install xor-cipher
 ```
 
 ## Usage
@@ -110,22 +116,23 @@ server-side, all chapters will be re-downloaded into a new directory.
 Install the package as editable and install development dependencies from `requirements.txt`:
 
 ```console
-$ python -m pip install -e .
-$ python -m pip install -r requirements.txt
+python -m pip install -e .
+python -m pip install -r requirements.txt
 ```
 
 Then install [pre-commit]:
 
 ```console
-$ pre-commit install
+pre-commit install
 ```
 
 Configure git to use the `.git-blame-ignore-revs` file:
 
 ```console
-$ git config blame.ignoreRevsFile .git-blame-ignore-revs
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
 [komga]: https://komga.org/
 [pip]: https://pip.pypa.io/en/stable/
 [pre-commit]: https://pre-commit.com/
+[xor-cipher]: https://pypi.org/project/xor-cipher/
