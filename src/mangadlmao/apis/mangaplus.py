@@ -90,9 +90,10 @@ class MangaPlus:
             try:
                 number = float(c["name"].lstrip("#"))
             except ValueError:
-                if match := re.match(
+                match = re.match(
                     r"^(?:[^\d\s])*\s?(\d+(?:\.\d+)?)", c["subTitle"], re.IGNORECASE
-                ):
+                )
+                if c["name"].lower() != "ex" and match:
                     number = float(match.group(1))
                 else:
                     # ...get it from adjacent chapters
@@ -105,6 +106,9 @@ class MangaPlus:
                             number += 0.5
                         else:
                             number = 0.5
+
+            if c["name"].lower() == "ex":
+                c["subTitle"] = "ex " + c["subTitle"]
 
             chapters.append(
                 MangaPlus.Chapter(
