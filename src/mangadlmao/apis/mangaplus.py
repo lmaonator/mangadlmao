@@ -86,6 +86,7 @@ class MangaPlus:
 
         chapters: list[MangaPlus.Chapter] = []
         combined_list: list = data["firstChapterList"] + data.get("lastChapterList", [])
+        number = 0.0
         for index, c in enumerate(combined_list):
             try:
                 number = float(c["name"].lstrip("#"))
@@ -101,11 +102,19 @@ class MangaPlus:
                         number = float(combined_list[index + 1]["name"].lstrip("#"))
                         number -= 0.5
                     except (ValueError, IndexError):
-                        if index - 1 >= 0:
-                            number = float(combined_list[index - 1]["name"].lstrip("#"))
-                            number += 0.5
-                        else:
-                            number = 0.5
+                        # If all chapters in lastChapterList are specials without chapter
+                        # number then this will fail, needs to be rewritten somehow
+                        try:
+                            if index - 1 >= 0:
+                                number = float(
+                                    combined_list[index - 1]["name"].lstrip("#")
+                                )
+                                number += 0.5
+                            else:
+                                number = 0.5
+                        except ValueError:
+                            # use previous number +0.01 for lack of better options right now
+                            number += 0.01
 
             if c["name"].lower() == "ex":
                 c["subTitle"] = "ex " + c["subTitle"]
