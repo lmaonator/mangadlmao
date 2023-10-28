@@ -181,7 +181,7 @@ class MangaDex:
         url: str,
         num_bytes: int,
         start_time: float,
-        response: requests.Response,
+        response: Optional[requests.Response],
     ):
         # https://api.mangadex.org/docs/reading-chapter/
         if "mangadex.org" in url:
@@ -296,7 +296,7 @@ class MangaDex:
         languages: Sequence[str],
         exclude: Sequence[str],
         dest_dir: Path,
-        since: Union[datetime, Literal["auto"], None] = None,
+        since: Union[datetime, date, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
         from_chapter: Optional[float] = None,
     ):
@@ -316,13 +316,14 @@ class MangaDex:
         if since == "auto":
             if (most_recent := most_recent_modified(dest_dir)) is None:
                 most_recent = datetime.fromtimestamp(0, tz=timezone.utc)
-            since = most_recent
-        elif since is not None:
-            # convert date to datetime
-            if not isinstance(since, datetime):
-                since = datetime(since.year, since.month, since.day).astimezone()
+            since_dt = most_recent
+        # convert date to datetime
+        elif isinstance(since, date) and not isinstance(since, datetime):
+            since_dt = datetime(since.year, since.month, since.day).astimezone()
+        elif isinstance(since, datetime):
+            since_dt = since
         else:
-            since = datetime.fromtimestamp(0, tz=timezone.utc)
+            since_dt = datetime.fromtimestamp(0, tz=timezone.utc)
 
         chapters = self.get_manga_chapters(manga_id, languages)
         if progress_callback:
@@ -374,7 +375,7 @@ class MangaDex:
 
             # skip chapters updated before <since>
             updated = datetime.fromisoformat(a["updatedAt"])
-            if since >= updated:
+            if since_dt >= updated:
                 progress_update()
                 continue
 

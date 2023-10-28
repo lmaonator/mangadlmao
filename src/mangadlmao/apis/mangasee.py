@@ -38,7 +38,7 @@ class MangaSee:
         rss_url: str,
         manga_title: str,
         dest_dir: Path,
-        since: Union[datetime, Literal["auto"], None] = None,
+        since: Union[datetime, date, Literal["auto"], None] = None,
         progress_callback: Optional[ProgressCallback] = None,
         from_chapter: Optional[float] = None,
     ):
@@ -62,10 +62,14 @@ class MangaSee:
         download_cover(d.feed.image.url, dest_dir, self.s)
 
         if since == "auto":
-            since = most_recent_modified(dest_dir)
+            since_dt = most_recent_modified(dest_dir)
         # convert date to datetime
-        if isinstance(since, date) and not isinstance(since, datetime):
-            since = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+        elif isinstance(since, date) and not isinstance(since, datetime):
+            since_dt = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+        elif isinstance(since, datetime):
+            since_dt = since
+        else:
+            since_dt = None
 
         # download chapters
         def progress_update(chapter: Optional[str] = None):
@@ -92,8 +96,8 @@ class MangaSee:
                 pass
 
             # skip chapters updated before <since>
-            if since is not None:
-                if since >= updated:
+            if since_dt is not None:
+                if since_dt >= updated:
                     # chapter was updated before since, skip
                     progress_update(chapter_number)
                     continue

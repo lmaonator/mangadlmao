@@ -271,18 +271,22 @@ def main(
             click.echo(f"Downloading MangaPlus manga {title}")
             # auto is not supported and convert date instances to datetime
             if since == "auto":
-                since = None
+                since_mp = None
             elif isinstance(since, date) and not isinstance(since, datetime):
-                since = datetime(
+                since_mp = datetime(
                     since.year, since.month, since.day, tzinfo=timezone.utc
                 )
+            elif isinstance(since, datetime):
+                since_mp = since
+            else:
+                since_mp = None
             with click.progressbar(length=1000) as bar:  # type: ignore[misc]
                 try:
                     mp.download_manga(
                         manga["mangaplus_id"],
                         download_dir,
                         manga.get("title"),
-                        since,
+                        since_mp,
                         from_chapter,
                         progress_callback=get_bar_callback(bar),
                     )
