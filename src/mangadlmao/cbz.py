@@ -35,7 +35,7 @@ def create_cbz(
     temp_file = Path(src_dir, "temp.cbz")
     files = [x for x in Path(src_dir).iterdir() if x.is_file()]
     with ZipFile(temp_file, mode="w", compression=ZIP_STORED) as zf:
-        for file in files:
+        for file in sorted(files):
             zf.write(file, file.name)
     try:
         temp_file.replace(dest_file)
