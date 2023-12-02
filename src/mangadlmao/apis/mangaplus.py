@@ -70,6 +70,7 @@ class MangaPlus:
         title: str
         number: float
         datetime: datetime
+        special: bool = False
 
     @dataclass
     class Manga:
@@ -79,56 +80,65 @@ class MangaPlus:
         cover_url: str
         chapters: list["MangaPlus.Chapter"]
 
+    def parse_raw_chapter_number(self, data: dict[str, Any]) -> Union[float, None]:
+        """Returns chapter number or None"""
+        try:
+            return float(data["name"].lstrip("#"))
+        except ValueError:
+            # some series have chapter number in subTitle instead of name
+            if data["name"].lower() != "ex" and (
+                match := re.match(
+                    r"^(?:[^\d\s])*\s?(\d+(?:\.\d+)?)", data["subTitle"], re.IGNORECASE
+                )
+            ):
+                return float(match.group(1))
+            return None
+
+    def parse_raw_chapter(self, data: dict[str, Any]) -> "MangaPlus.Chapter":
+        """Returns Chapter"""
+        id_ = data["chapterId"]
+        title = data["subTitle"]
+        dt = datetime.fromtimestamp(data["startTimeStamp"], tz=timezone.utc)
+        special = False
+        number = self.parse_raw_chapter_number(data)
+        if number is None:
+            number = 0.0
+            special = True
+            title = data["name"] + " - " + title
+        return MangaPlus.Chapter(id_, title, number, dt, special)
+
     def get_details(self, manga_id: int) -> Manga:
-        data = self._request("/title_detail", {"title_id": manga_id})
+        data = self._request("/title_detailV3", {"title_id": manga_id})
         data = data["success"]["titleDetailView"]
         title = data["title"]
 
         chapters: list[MangaPlus.Chapter] = []
-        combined_list: list = data["firstChapterList"] + data.get("lastChapterList", [])
-        number = 0.0
-        for index, c in enumerate(combined_list):
-            try:
-                number = float(c["name"].lstrip("#"))
-            except ValueError:
-                match = re.match(
-                    r"^(?:[^\d\s])*\s?(\d+(?:\.\d+)?)", c["subTitle"], re.IGNORECASE
-                )
-                if c["name"].lower() != "ex" and match:
-                    number = float(match.group(1))
+        last_number = 0.0
+        group: dict[str, list]
+        for group in data["chapterListGroup"]:
+            # firstChapterList only appears in the first group
+            for c in group.get("firstChapterList", []):
+                chapter = self.parse_raw_chapter(c)
+                if chapter.special:
+                    chapter.number = last_number + 0.1
+                chapters.append(chapter)
+                last_number = chapter.number
+
+            # midChapterList is not readable outside the app, only use it for numbers
+            for c in group.get("midChapterList", []):
+                number = self.parse_raw_chapter_number(c)
+                if number is None:
+                    last_number = last_number + 0.1
                 else:
-                    # ...get it from adjacent chapters
-                    try:
-                        number = float(combined_list[index + 1]["name"].lstrip("#"))
-                        number -= 0.5
-                    except (ValueError, IndexError):
-                        # If all chapters in lastChapterList are specials without chapter
-                        # number then this will fail, needs to be rewritten somehow
-                        try:
-                            if index - 1 >= 0:
-                                number = float(
-                                    combined_list[index - 1]["name"].lstrip("#")
-                                )
-                                number += 0.5
-                            else:
-                                number = 0.5
-                        except ValueError:
-                            # use previous number +0.01 for lack of better options right now
-                            number += 0.01
+                    last_number = number
 
-            if c["name"].lower() == "ex":
-                c["subTitle"] = "ex " + c["subTitle"]
-
-            chapters.append(
-                MangaPlus.Chapter(
-                    id=c["chapterId"],
-                    title=c["subTitle"],
-                    number=number,
-                    datetime=datetime.fromtimestamp(
-                        c["startTimeStamp"], tz=timezone.utc
-                    ),
-                )
-            )
+            # lastChapterList appears in groups until the end
+            for c in group.get("lastChapterList", []):
+                chapter = self.parse_raw_chapter(c)
+                if chapter.special:
+                    chapter.number = last_number + 0.1
+                chapters.append(chapter)
+                last_number = chapter.number
 
         return MangaPlus.Manga(
             title=title["name"],
@@ -234,6 +244,12 @@ class MangaPlus:
         if progress_callback:
             progress_callback(length=len(details.chapters))
 
+        existing_chapters = [
+            int(match.group(1))
+            for x in dest_dir.glob("*.cbz")
+            if (match := re.match(r".+ \[MangaPlus-(\d+)\].cbz", x.name))
+        ]
+
         for chapter in details.chapters:
             number = f"{chapter.number:g}"
             number_str = format_chapter_number(number)
@@ -254,7 +270,7 @@ class MangaPlus:
             }
 
             filepath = dest_dir / filename
-            if filepath.exists():
+            if filepath.exists() or (chapter.id in existing_chapters):
                 logger.debug("Skipping already downloaded chapter: %s", filepath)
             else:
                 try:
