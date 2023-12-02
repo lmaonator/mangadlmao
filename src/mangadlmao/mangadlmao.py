@@ -149,6 +149,19 @@ def main(
 
     click.echo(f"Download directory: {click.style(download_dir, fg='magenta')}")
 
+    def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
+        def callback(
+            progress: Optional[int] = None,
+            length: Optional[int] = None,
+            chapter: Optional[str] = None,
+        ):
+            if length is not None:
+                bar.length = length
+            if progress is not None:
+                bar.update(progress, chapter)
+
+        return callback
+
     md = MangaDex(max_workers=jobs)
     ms = MangaSee(max_workers=jobs)
     mp = MangaPlus(max_workers=jobs)
@@ -175,8 +188,8 @@ def main(
                     r"^https://(?:www\.)?mangasee123\.com/manga/([^/?#]+)",
                     r"https://mangasee123.com/rss/\g<1>.xml",
                     md_url,
-                    1,
-                    re.IGNORECASE,
+                    count=1,
+                    flags=re.IGNORECASE,
                 )
                 if rss.endswith(".xml"):
                     manga["rss"] = rss
@@ -208,19 +221,6 @@ def main(
             from_opt if from_opt is not None else manga.get("from", None)
         )
 
-        def get_bar_callback(bar: "ProgressBar") -> ProgressCallback:
-            def callback(
-                progress: Optional[int] = None,
-                length: Optional[int] = None,
-                chapter: Optional[str] = None,
-            ):
-                if length is not None:
-                    bar.length = length
-                if progress is not None:
-                    bar.update(progress, chapter)
-
-            return callback
-
         if "id" in manga:
             # MangaDex
             lang = default_languages if not manga.get("lang") else manga["lang"]
@@ -231,9 +231,10 @@ def main(
                 f"Downloading MangaDex manga {title} "
                 f"in languages {click.style(', '.join(lang), fg='green')}"
             )
+            bar: ProgressBar[str]
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
-            ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+            ) as bar:
                 try:
                     md.download_manga(
                         manga["id"],
@@ -253,7 +254,7 @@ def main(
             click.echo(f"Downloading MangaSee manga {title}")
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
-            ) as bar:  # type: ignore[misc]  # mypy can't infer type for non-existent iterable
+            ) as bar:
                 try:
                     ms.download_manga(
                         manga["rss"],
@@ -280,7 +281,7 @@ def main(
                 since_mp = since
             else:
                 since_mp = None
-            with click.progressbar(length=1000) as bar:  # type: ignore[misc]
+            with click.progressbar(length=1000) as bar:
                 try:
                     mp.download_manga(
                         manga["mangaplus_id"],
