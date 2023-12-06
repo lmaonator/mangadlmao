@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, Optional, Union
 from urllib.parse import urlparse
+import itertools
 
 import requests
 
@@ -179,8 +180,7 @@ class MangaPlus:
 
             return cyclic_xor(image_bytes, bytes(key))
         except ModuleNotFoundError:
-            key_size = len(key)
-            return bytes(byte ^ key[i % key_size] for i, byte in enumerate(image_bytes))
+            return bytes(byte ^ k for byte, k in zip(image_bytes, itertools.cycle(key)))
 
     def download_page(self, page: Page, tmpdir: str) -> bool:
         filename = f"{page.number:04}{Path(urlparse(page.image_url).path).suffix}"
