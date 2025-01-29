@@ -100,12 +100,6 @@ manga:
   # entries with id are treated as MangaDex entries
   - title: Nice Manga Title
     id: aed22b2e-b544-4204-9702-cdf5cfc167de
-
-  # entries with rss are currently treated as WeebCentral entries
-  - title: Manga 69
-    rss: https://weebcentral/rss/Manga-69.xml
-    since: 2020-12-24
-    # lang has no effect with WeebCentral
 ```
 
 The `title` key is optional but because it is used as directory name, if the name changes

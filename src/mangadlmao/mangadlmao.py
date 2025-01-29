@@ -10,7 +10,7 @@ import yaml
 
 from mangadlmao.apis.mangadex import MangaDex
 from mangadlmao.apis.mangaplus import MangaPlus
-from mangadlmao.apis.mangasee import MangaSee
+from mangadlmao.apis.weebcentral import WeebCentral
 
 from .utils import ProgressCallback
 
@@ -163,12 +163,12 @@ def main(
         return callback
 
     md = MangaDex(max_workers=jobs)
-    ms = MangaSee(max_workers=jobs)
+    ms = WeebCentral(max_workers=jobs)
     mp = MangaPlus(max_workers=jobs)
     manga: dict[str, Any]
     for manga in cfg["manga"]:
         if manga.get("url"):
-            # parse URL and populate id or rss entry
+            # parse URL and populate id or url entries
             md_url: str = manga["url"]
             if "mangadex.org" in md_url:
                 if match := re.match(
@@ -184,18 +184,22 @@ def main(
                         err=True,
                     )
             elif "mangasee123.com" in md_url:
-                rss = re.sub(
-                    r"^https://(?:www\.)?(mangasee123|weebcentral)\.com/manga/([^/?#]+)",
-                    r"https://weebcentral.com/rss/\g<1>.xml",
-                    md_url,
-                    count=1,
-                    flags=re.IGNORECASE,
+                click.secho(
+                    f"MangaSee is now WeebCentral, please update your config for manga entry: {click.style(manga, fg='red')}",
+                    fg="yellow",
+                    err=True,
                 )
-                if rss.endswith(".xml"):
-                    manga["rss"] = rss
+                continue
+            elif "weebcentral.com" in md_url:
+                if m := re.match(
+                    r"https://weebcentral\.com/series/([A-Z0-9]+)/?.*",
+                    md_url,
+                    flags=re.IGNORECASE,
+                ):
+                    manga["weebcentral_id"] = m.group(1)
                 else:
                     click.secho(
-                        f"Malformed MangaSee URL {md_url} in manga entry: {click.style(manga, fg='red')}",
+                        f"Malformed WeebCentral URL {md_url} in manga entry: {click.style(manga, fg='red')}",
                         fg="yellow",
                         err=True,
                     )
@@ -248,16 +252,15 @@ def main(
                     )
                 except Exception as e:
                     click.secho(f"Download of {title} failed: {e}", fg="red", err=True)
-        elif "rss" in manga:
-            # MangaSee
-            title = f"{stitle}({click.style(manga['rss'], fg='cyan')})"
-            click.echo(f"Downloading MangaSee manga {title}")
+        elif "weebcentral_id" in manga:
+            title = f"{stitle} ({click.style(manga['weebcentral_id'], fg='cyan')})"
+            click.echo(f"Downloading WeebCentral manga {title}")
             with click.progressbar(
                 length=1000, item_show_func=lambda n: f"Chapter {n}" if n else None
             ) as bar:
                 try:
                     ms.download_manga(
-                        manga["rss"],
+                        manga["weebcentral_id"],
                         manga.get("title", ""),
                         download_dir,
                         since=since,
