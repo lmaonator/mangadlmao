@@ -185,8 +185,8 @@ def main(
                     )
             elif "mangasee123.com" in md_url:
                 rss = re.sub(
-                    r"^https://(?:www\.)?mangasee123\.com/manga/([^/?#]+)",
-                    r"https://mangasee123.com/rss/\g<1>.xml",
+                    r"^https://(?:www\.)?(mangasee123|weebcentral)\.com/manga/([^/?#]+)",
+                    r"https://weebcentral.com/rss/\g<1>.xml",
                     md_url,
                     count=1,
                     flags=re.IGNORECASE,

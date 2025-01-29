@@ -84,7 +84,7 @@ exclude:
   - 33171bc6-0c2a-40d7-9cca-120ac52f09ae
 
 manga:
-  # entries with url can be either MangaDex, MangaSee, or MangaPlus
+  # entries with url can be either MangaDex, WeebCentral, or MangaPlus
   - url: https://mangadex.org/title/15931821-1a3a-4aee-b27c-1c95d8d5dcf1/hololive-yohane-s-twitter-shorts
     title: Hololive Shorts by Yohane
     # override default "since" setting:
@@ -101,11 +101,11 @@ manga:
   - title: Nice Manga Title
     id: aed22b2e-b544-4204-9702-cdf5cfc167de
 
-  # entries with rss are currently treated as MangaSee entries
+  # entries with rss are currently treated as WeebCentral entries
   - title: Manga 69
-    rss: https://mangasee/rss/Manga-69.xml
+    rss: https://weebcentral/rss/Manga-69.xml
     since: 2020-12-24
-    # lang has no effect with MangaSee
+    # lang has no effect with WeebCentral
 ```
 
 The `title` key is optional but because it is used as directory name, if the name changes
