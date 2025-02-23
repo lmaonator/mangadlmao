@@ -37,10 +37,12 @@ class Chapter:
 
 class WeebCentral:
     DOMAIN = "https://weebcentral.com/"
+    UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0"
 
     def __init__(self, max_workers: int = 4) -> None:
         self.max_workers = max_workers
         self.s = requests.Session()
+        self.s.headers["User-Agent"] = self.UA
 
     def download_manga(
         self,
@@ -56,6 +58,7 @@ class WeebCentral:
                 r.raise_for_status()
                 soup = BeautifulSoup(r.text, "html.parser")
         except requests.RequestException:
+            logger.error("Failed to get WeebCentral series page", exc_info=True)
             return
 
         if not manga_title:
