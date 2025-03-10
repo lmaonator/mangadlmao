@@ -37,7 +37,7 @@ class Chapter:
 
 class WeebCentral:
     DOMAIN = "https://weebcentral.com/"
-    UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0"
+    UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
 
     def __init__(self, max_workers: int = 4) -> None:
         self.max_workers = max_workers
@@ -196,16 +196,26 @@ class WeebCentral:
                             futures.append(
                                 executor.submit(self.download, url, page, tmpdir)
                             )
-                        concurrent.futures.wait(
+                        done, _ = concurrent.futures.wait(
                             futures, return_when=concurrent.futures.FIRST_EXCEPTION
                         )
+                        for f in done:
+                            e = f.exception()
+                            if e is not None:
+                                raise e
 
                     yield Path(tmpdir)
         finally:
             pass
 
     def download(self, page_url: str, page_number: int, tmpdir: str):
-        with requests.get(page_url, timeout=30, stream=True) as page_result:
+        with requests.get(
+            page_url,
+            timeout=30,
+            stream=True,
+            headers={"Referer": self.DOMAIN, "User-Agent": self.UA},
+        ) as page_result:
+            page_result.raise_for_status()
             ext = page_url.rsplit(".", maxsplit=1)[1]
             guessed = False
             filepath = Path(tmpdir, f"{page_number:03d}")
