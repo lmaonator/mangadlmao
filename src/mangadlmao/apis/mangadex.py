@@ -2,6 +2,7 @@ import concurrent.futures
 import logging
 import os
 import tempfile
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, Union
 
 import requests
+
 from mangadlmao.cbz import create_cbz
 from mangadlmao.utils import (
     ProgressCallback,
@@ -28,11 +30,14 @@ class RetryException(Exception):
 
 class MangaDex:
     BASE_URL = "https://api.mangadex.org"
+    MAX_FAILED_REPORTS = 3
 
     def __init__(self, max_workers: int = 4) -> None:
         self.max_workers = max_workers
         self.s = requests.Session()
         self.last_requests: dict[str, float] = {}
+        self.failed_reports = 0
+        self.report_lock = threading.Lock()
 
     @contextmanager
     def _request(self, method: str, url: str, *args, **kwargs):
@@ -186,6 +191,10 @@ class MangaDex:
         # https://api.mangadex.org/docs/reading-chapter/
         if "mangadex.org" in url:
             return True
+        with self.report_lock:
+            if self.failed_reports > self.MAX_FAILED_REPORTS:
+                logger.debug("Skipping MangaDex@Home report due to repeated failures")
+                return True
 
         duration = round((time.monotonic() - start_time) * 1000)
 
@@ -215,6 +224,11 @@ class MangaDex:
                 },
                 timeout=30,
             ) as r:
+                with self.report_lock:
+                    if r.ok and self.failed_reports > 0:
+                        self.failed_reports -= 1
+                    else:
+                        self.failed_reports += 1
                 return r.ok
         except requests.RequestException:
             logger.debug(
@@ -222,6 +236,8 @@ class MangaDex:
                 url,
                 exc_info=True,
             )
+            with self.report_lock:
+                self.failed_reports += 1
             return False
 
     @contextmanager
