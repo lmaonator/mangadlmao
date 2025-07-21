@@ -91,7 +91,9 @@ class MangaDex:
             cover_rel = next(
                 (x for x in data["relationships"] if x["type"] == "cover_art")
             )
-            cover_url: str = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
+            cover_url: str = (
+                f"https://uploads.mangadex.org/covers/{manga_id}/{cover_rel['attributes']['fileName']}"
+            )
 
             last_chapter: str = attributes.get("lastChapter", "")
 
