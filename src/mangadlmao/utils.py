@@ -88,8 +88,7 @@ class ProgressCallback(Protocol):
         progress: Optional[int] = None,
         length: Optional[int] = None,
         chapter: Optional[str] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 def most_recent_modified(
